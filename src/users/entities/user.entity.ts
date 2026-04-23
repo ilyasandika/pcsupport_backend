@@ -30,7 +30,7 @@ export class User {
   })
   email: string;
 
-  @Column()
+  @Column({ select: false })
   @Exclude()
   password: string;
 

@@ -1,12 +1,17 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 
 @Injectable()
 export class UsersService {
@@ -14,38 +19,86 @@ export class UsersService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const { username, email } = createUserDto;
+  async create(dto: CreateUserDto){
+    const { username, email } = dto;
 
-    const isExist = await this.userRepository.exists({
+    const existingUser = await this.userRepository.findOne({
       where: [{ username }, { email }],
+      select: ['username', 'email'],
     });
 
-    if (isExist) {
-      throw new ConflictException('User already exists');
+    if (existingUser) {
+      if (existingUser.username === username && existingUser.email === email) {
+        throw new ConflictException('username and email already taken');
+      }
+      if (existingUser.username === username) {
+        throw new ConflictException('username already taken');
+      }
+      if (existingUser.email === email) {
+        throw new ConflictException('email already taken');
+      }
     }
 
     const salt = parseInt(process.env.SALT || '10');
-    createUserDto.password = await bcrypt.hash(createUserDto.password, salt);
+    dto.password = await bcrypt.hash(dto.password, salt);
 
-    const newUser = this.userRepository.create(createUserDto);
+    const newUser = this.userRepository.create(dto);
     return await this.userRepository.save(newUser);
   }
 
-  //
-  // findAll() {
-  //   return `This action returns all users`;
-  // }
-  //
-  async findOne(id: number) {
-    return await this.userRepository.findOneBy({ id });
+  async findAll() {
+    return await this.userRepository.find();
   }
-  //
-  // update(id: number, updateUserDto: UpdateUserDto) {
-  //   return `This action updates a #${id} user`;
-  // }
-  //
-  // remove(id: number) {
-  //   return `This action removes a #${id} user`;
-  // }
+
+  async findOne(id: number) {
+    const user = await this.userRepository.findOneBy({ id });
+
+    if (!user) {
+      throw new NotFoundException(`user does not exist`);
+    }
+
+    return user;
+  }
+
+  async update(id: number, dto: UpdateUserDto) {
+    const user = await this.findOrThrow(id);
+    this.userRepository.merge(user, dto);
+    return await this.userRepository.save(user);
+  }
+
+  async updatePassword(id: number, dto: UpdateUserPasswordDto) {
+    const user = await this.userRepository.findOne({
+      where: [{ id }],
+      select: ['password'],
+    });
+    if (!user) {
+      throw new NotFoundException(`user does not exist`);
+    }
+
+    const isMatch = await bcrypt.compare(dto.oldPassword, user.password);
+
+    if (!isMatch) {
+      throw new BadRequestException(`incorrect old password`);
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      dto.newPassword,
+      parseInt(process.env.SALT || '10'),
+    );
+    await this.userRepository.update(id, { password: hashedPassword });
+  }
+
+  async remove(id: number) {
+    await this.findOrThrow(id);
+    await this.userRepository.delete(id);
+  }
+
+  private async findOrThrow(id: number): Promise<User> {
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user) {
+      throw new NotFoundException(`user does not exist`);
+    }
+
+    return user;
+  }
 }
