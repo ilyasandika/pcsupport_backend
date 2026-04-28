@@ -2,8 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  Logger,
-  NotFoundException,
+  NotFoundException, UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,6 +11,8 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
+import { LoginDto } from '../auth/dto/login.dto';
+import { UserForLogin } from '../../common/types/user-login.type';
 
 @Injectable()
 export class UsersService {
@@ -19,7 +20,7 @@ export class UsersService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
-  async create(dto: CreateUserDto){
+  async create(dto: CreateUserDto) {
     const { username, email } = dto;
 
     const existingUser = await this.userRepository.findOne({
@@ -91,6 +92,17 @@ export class UsersService {
   async remove(id: number) {
     await this.findOrThrow(id);
     await this.userRepository.delete(id);
+  }
+
+  async findForLogin(username: string): Promise<UserForLogin> {
+    const user = await this.userRepository.findOne({
+      where: [{ username }],
+      select: ['id', 'username', 'email', 'password', 'role'],
+    });
+    if (!user) {
+      return null;
+    }
+    return user;
   }
 
   private async findOrThrow(id: number): Promise<User> {
