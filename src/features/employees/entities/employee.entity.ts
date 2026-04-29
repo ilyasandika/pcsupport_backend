@@ -2,20 +2,17 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { EmployeeStatus } from '../../../common/enums/employee-status.enum';
 import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
 
 @Entity({
   name: 'employees',
 })
 export class Employee {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column({
+  @PrimaryColumn({
     name: 'employee_id',
   })
   employeeId: string;
@@ -58,7 +55,7 @@ export class Employee {
   department: string;
 
   @Column()
-  status?: EmployeeStatus;
+  status?: boolean;
 
   @Column({
     name: 'retire_date',

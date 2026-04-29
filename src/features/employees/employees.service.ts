@@ -1,11 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Employee } from './entities/employee.entity';
 import { Repository } from 'typeorm';
 import { parse } from 'csv-parse';
 import { RawEmployeeCsv } from '../../common/interfaces/raw-employee-csv.interface';
 import { EmployeeContractType } from '../../common/enums/contract-type.enum';
-import { EmployeeStatus } from '../../common/enums/employee-status.enum';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 
 @Injectable()
@@ -50,10 +49,7 @@ export class EmployeesService {
               directorate: row['DIREKTORAT'],
               division: row['DIVISI'],
               department: row['DEPARTEMEN'],
-              status:
-                row['STAT_USER'] == 'ON_BA'
-                  ? EmployeeStatus.On
-                  : EmployeeStatus.Off,
+              status: row['STAT_USER'] == 'ON_BA',
               retireDate: formattedRetireDate,
             };
           });
@@ -63,7 +59,23 @@ export class EmployeesService {
       );
     });
   }
-  async bulkSaveEmployee(dto: CreateEmployeeDto[]) {
-    return await this.employeeRepository.save(dto);
+
+  private async bulkSaveEmployee(dto: CreateEmployeeDto[]) {
+    return await this.employeeRepository.upsert(dto, {
+      conflictPaths: ['employeeId'],
+      skipUpdateIfNoValuesChanged: true,
+    });
+  }
+
+  async findAll(): Promise<Employee[]> {
+    return await this.employeeRepository.find();
+  }
+
+  async findOne(id: string): Promise<Employee> {
+    const user = await this.employeeRepository.findOneBy({ employeeId: id });
+    if (!user) {
+      throw new NotFoundException(`user does not exist`);
+    }
+    return user;
   }
 }

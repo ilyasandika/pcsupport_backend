@@ -7,6 +7,7 @@ import {
   MaxFileSizeValidator,
   FileTypeValidator,
   Get,
+  Param,
 } from '@nestjs/common';
 import { EmployeesService } from './employees.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -14,10 +15,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @Controller('employees')
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
-  @Get()
-  test() {
-    return 'test';
-  }
 
   @Post('import-csv')
   @UseInterceptors(FileInterceptor('file')) // 'file' must match the key in Postman/Frontend
@@ -36,5 +33,15 @@ export class EmployeesController {
     file: Express.Multer.File,
   ) {
     return await this.employeesService.parseCsv(file.buffer);
+  }
+
+  @Get()
+  async findAll() {
+    return await this.employeesService.findAll();
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return await this.employeesService.findOne(id);
   }
 }

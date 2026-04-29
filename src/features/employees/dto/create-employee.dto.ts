@@ -1,5 +1,4 @@
 import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
-import { EmployeeStatus } from '../../../common/enums/employee-status.enum';
 
 export class CreateEmployeeDto {
   employeeId: string;
@@ -14,6 +13,6 @@ export class CreateEmployeeDto {
   directorate: string;
   division: string;
   department: string;
-  status: EmployeeStatus;
+  status: boolean;
   retireDate?: Date;
 }

@@ -6,7 +6,6 @@ import { AuthModule } from './features/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { EmployeesModule } from './features/employees/employees.module';
-import { AssetsModule } from './features/assets/assets.module';
 
 @Module({
   imports: [
@@ -32,7 +31,6 @@ import { AssetsModule } from './features/assets/assets.module';
       signOptions: { expiresIn: '1d' },
     }),
     EmployeesModule,
-    AssetsModule,
   ],
   controllers: [],
   providers: [],
