@@ -1,4 +1,4 @@
-import { ROLE } from '../../../common/enums/role.enum';
+import { Role } from '../../../common/enums/role.enum';
 import {
   Column,
   CreateDateColumn,
@@ -35,9 +35,9 @@ export class User {
   password: string;
 
   @Column({
-    default: ROLE.ENGINEER,
+    default: Role.Engineer,
   })
-  role: ROLE;
+  role: Role;
 
   @Column({
     default: true,

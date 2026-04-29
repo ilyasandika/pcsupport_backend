@@ -2,7 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException, UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,7 +11,6 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
-import { LoginDto } from '../auth/dto/login.dto';
 import { UserForLogin } from '../../common/types/user-login.type';
 
 @Injectable()

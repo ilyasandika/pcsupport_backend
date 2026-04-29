@@ -17,12 +17,13 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLE } from '../../common/enums/role.enum';
+import { Role } from '../../common/enums/role.enum';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.Engineer, Role.Admin)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -30,9 +31,7 @@ export class UsersController {
   create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);
   }
-  //
 
-  @Roles(ROLE.ENGINEER)
   @Get()
   findAll() {
     return this.usersService.findAll();
