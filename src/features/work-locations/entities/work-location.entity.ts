@@ -1,0 +1,48 @@
+import {
+  Column,
+  CreateDateColumn,
+  Entity, ManyToOne, OneToMany, OneToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { Asset } from '../../assets/entities/asset.entity';
+
+@Entity('work_locations')
+export class WorkLocation {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
+  name: string;
+
+  @Column()
+  description: string;
+
+  @Column({
+    type: 'double precision',
+  })
+  longitude: number;
+
+  @Column({
+    type: 'double precision',
+  })
+  latitude: number;
+
+  @Column()
+  address: string;
+
+  @CreateDateColumn({
+    name: 'created_at',
+  })
+  createdAt: Date;
+
+  @UpdateDateColumn({
+    name: 'updated_at',
+  })
+  updatedAt: Date;
+
+  //relation
+
+  @OneToMany(() => Asset, (asset) => asset.workLocation)
+  assets: Asset[];
+}

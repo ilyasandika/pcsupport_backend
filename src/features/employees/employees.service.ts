@@ -64,6 +64,7 @@ export class EmployeesService {
     return await this.employeeRepository.upsert(dto, {
       conflictPaths: ['employeeId'],
       skipUpdateIfNoValuesChanged: true,
+      upsertType: 'on-conflict-do-update',
     });
   }
 

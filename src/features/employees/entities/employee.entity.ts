@@ -12,8 +12,12 @@ import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
   name: 'employees',
 })
 export class Employee {
-  @PrimaryColumn({
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({
     name: 'employee_id',
+    unique: true,
   })
   employeeId: string;
 

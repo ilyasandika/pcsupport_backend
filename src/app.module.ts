@@ -6,6 +6,10 @@ import { AuthModule } from './features/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { EmployeesModule } from './features/employees/employees.module';
+import { AssetsModule } from './features/assets/assets.module';
+import { WorkLocationsModule } from './features/work-locations/work-locations.module';
+import { VendorsModule } from './features/vendors/vendors.module';
+import { VendorSupportContactsModule } from './features/vendor_support_contacts/vendor_support_contacts.module';
 
 @Module({
   imports: [
@@ -31,6 +35,10 @@ import { EmployeesModule } from './features/employees/employees.module';
       signOptions: { expiresIn: '1d' },
     }),
     EmployeesModule,
+    AssetsModule,
+    WorkLocationsModule,
+    VendorsModule,
+    VendorSupportContactsModule,
   ],
   controllers: [],
   providers: [],
