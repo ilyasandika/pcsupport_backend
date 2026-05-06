@@ -8,8 +8,8 @@ export class WorkLocationsController {
   constructor(private readonly workLocationsService: WorkLocationsService) {}
 
   @Post()
-  create(@Body() createWorkLocationDto: CreateWorkLocationDto) {
-    return this.workLocationsService.create(createWorkLocationDto);
+  create(@Body() dto: CreateWorkLocationDto) {
+    return this.workLocationsService.create(dto);
   }
 
   @Get()
@@ -23,8 +23,8 @@ export class WorkLocationsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateWorkLocationDto: UpdateWorkLocationDto) {
-    return this.workLocationsService.update(+id, updateWorkLocationDto);
+  update(@Param('id') id: string, @Body() dto: UpdateWorkLocationDto) {
+    return this.workLocationsService.update(+id, dto);
   }
 
   @Delete(':id')
