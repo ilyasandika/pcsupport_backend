@@ -9,6 +9,13 @@ import {
 } from 'typeorm';
 import { ContactType } from '../../../common/enums/vendor-contact-type.enum';
 import { Vendor } from '../../vendors/entities/vendor.entity';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsPhoneNumber,
+  ValidateIf,
+} from 'class-validator';
+import { Exclude } from 'class-transformer';
 
 @Entity({
   name: 'vendor_support_contacts',
@@ -19,14 +26,15 @@ export class VendorSupportContact {
 
   @Column({
     name: 'vendor_id',
+    select: false,
   })
   vendorId: number;
 
   @Column()
-  contact: string;
+  type: ContactType;
 
   @Column()
-  type: ContactType;
+  contact: string;
 
   @CreateDateColumn({
     name: 'created_at',

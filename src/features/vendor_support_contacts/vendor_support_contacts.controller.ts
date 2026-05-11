@@ -3,14 +3,21 @@ import { VendorSupportContactsService } from './vendor_support_contacts.service'
 import { CreateVendorSupportContactDto } from './dto/create-vendor_support_contact.dto';
 import { UpdateVendorSupportContactDto } from './dto/update-vendor_support_contact.dto';
 
-@Controller('vendor-support-contacts')
+@Controller('support-contacts')
 export class VendorSupportContactsController {
-  constructor(private readonly vendorSupportContactsService: VendorSupportContactsService) {}
+  constructor(
+    private readonly vendorSupportContactsService: VendorSupportContactsService,
+  ) {}
 
   @Post()
-  create(@Body() createVendorSupportContactDto: CreateVendorSupportContactDto) {
-    return this.vendorSupportContactsService.create(createVendorSupportContactDto);
+  create(@Body() dto: CreateVendorSupportContactDto) {
+    return this.vendorSupportContactsService.create(dto);
   }
+
+  // @Get(':id')
+  // findAllByVendorId(@Param('id') id: string) {
+  //   return this.vendorSupportContactsService.findAllByVendorId(+id);
+  // }
 
   @Get()
   findAll() {
@@ -23,8 +30,8 @@ export class VendorSupportContactsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateVendorSupportContactDto: UpdateVendorSupportContactDto) {
-    return this.vendorSupportContactsService.update(+id, updateVendorSupportContactDto);
+  update(@Param('id') id: string, @Body() dto: UpdateVendorSupportContactDto) {
+    return this.vendorSupportContactsService.update(+id, dto);
   }
 
   @Delete(':id')
