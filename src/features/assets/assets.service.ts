@@ -17,11 +17,12 @@ export class AssetsService {
   ) {}
 
   async create(dto: CreateAssetDto) {
-    try {
-      return await this.assetRepository.save(dto);
-    } catch {
-      throw new ConflictException()
-    }
+    return await this.assetRepository.save(dto);
+    // try {
+    //   return await this.assetRepository.save(dto);
+    // } catch {
+    //   throw new ConflictException();
+    // }
   }
 
   async findAll() {

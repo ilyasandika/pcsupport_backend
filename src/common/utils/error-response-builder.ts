@@ -8,14 +8,16 @@ export class ErrorResponseBuilder {
     success: boolean,
     statusCode: number,
     message: string,
-    errors: string[] | string | number,
+    errors: string[] | string | number | ErrorDetail,
     method: string,
     path: string,
     timestamp: string,
   ): GeneralErrorResponse {
-
     let sanitizedErrors: ErrorDetail[];
-    if (Array.isArray(errors) && typeof errors[0] === 'object') {
+
+    if (this.isErrorDetail(errors)) {
+      sanitizedErrors = [errors];
+    } else if (Array.isArray(errors) && typeof errors[0] === 'object') {
       sanitizedErrors = errors as unknown as ErrorDetail[];
     } else if (Array.isArray(errors)) {
       sanitizedErrors = [{ field: 'general', message: errors }];
@@ -33,4 +35,7 @@ export class ErrorResponseBuilder {
       timestamp,
     };
   }
+
+  private static isErrorDetail = (errors: unknown): errors is ErrorDetail =>
+    (errors as ErrorDetail).field !== undefined;
 }
