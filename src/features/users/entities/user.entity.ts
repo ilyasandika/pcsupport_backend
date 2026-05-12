@@ -16,7 +16,7 @@ export class User {
   id: number;
 
   @Column({
-    unique: false,
+    unique: true,
   })
   username: string;
 
@@ -26,7 +26,7 @@ export class User {
   fullName: string;
 
   @Column({
-    unique: false,
+    unique: true,
   })
   email: string;
 

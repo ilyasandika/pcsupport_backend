@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
@@ -8,8 +16,8 @@ export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
 
   @Post()
-  create(@Body() createAssetDto: CreateAssetDto) {
-    return this.assetsService.create(createAssetDto);
+  create(@Body() dto: CreateAssetDto) {
+    return this.assetsService.create(dto);
   }
 
   @Get()
@@ -23,8 +31,8 @@ export class AssetsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAssetDto: UpdateAssetDto) {
-    return this.assetsService.update(+id, updateAssetDto);
+  update(@Param('id') id: string, @Body() dto: UpdateAssetDto) {
+    return this.assetsService.update(+id, dto);
   }
 
   @Delete(':id')

@@ -1,26 +1,61 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Asset } from './entities/asset.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class AssetsService {
-  create(createAssetDto: CreateAssetDto) {
-    return 'This action adds a new asset';
+  constructor(
+    @InjectRepository(Asset)
+    private readonly assetRepository: Repository<Asset>,
+  ) {}
+
+  async create(dto: CreateAssetDto) {
+    try {
+      return await this.assetRepository.save(dto);
+    } catch {
+      throw new ConflictException()
+    }
   }
 
-  findAll() {
-    return `This action returns all assets`;
+  async findAll() {
+    return await this.assetRepository.find({
+      relations: {
+        workLocation: true,
+        vendor: true,
+      },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} asset`;
+  async findOne(id: number) {
+    try {
+      return await this.assetRepository.findOneOrFail({
+        where: { id },
+        relations: {
+          workLocation: true,
+          vendor: true,
+        },
+      });
+    } catch {
+      throw new NotFoundException('asset not found');
+    }
   }
 
-  update(id: number, updateAssetDto: UpdateAssetDto) {
-    return `This action updates a #${id} asset`;
+  async update(id: number, dto: UpdateAssetDto) {
+    const asset = await this.assetRepository.findOneBy({ id });
+    if (!asset) throw new NotFoundException('asset not found');
+    return await this.assetRepository.save(dto);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} asset`;
+  async remove(id: number) {
+    const asset = await this.assetRepository.findOneBy({ id });
+    if (!asset) throw new NotFoundException('asset not found');
+    return await this.assetRepository.delete(id);
   }
 }

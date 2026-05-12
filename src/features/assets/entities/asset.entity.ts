@@ -3,7 +3,9 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
-  ManyToOne, PrimaryGeneratedColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { AssetCategory } from '../../../common/enums/asset-type.enum';
@@ -19,11 +21,13 @@ export class Asset {
 
   @Column({
     name: 'serial_number',
+    unique: true,
   })
   serialNumber: string;
 
   @Column({
     name: 'asset_tag',
+    unique: true,
   })
   assetTag: string;
 
@@ -41,6 +45,7 @@ export class Asset {
 
   @Column({
     name: 'work_location_id',
+    select: false,
   })
   workLocationId: number;
 
@@ -61,6 +66,7 @@ export class Asset {
 
   @Column({
     name: 'vendor_id',
+    select: false,
   })
   vendorId: number;
 
@@ -103,7 +109,7 @@ export class Asset {
   @JoinColumn({ name: 'work_location_id' })
   workLocation: WorkLocation;
 
-  @ManyToOne(()=> Vendor, (vendor) => vendor.assets)
+  @ManyToOne(() => Vendor, (vendor) => vendor.assets)
   @JoinColumn({ name: 'vendor_id' })
   vendor: Vendor;
 }
