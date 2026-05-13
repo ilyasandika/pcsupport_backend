@@ -1,6 +1,7 @@
 import { AssetCategory } from '../../../common/enums/asset-type.enum';
 import {
   IsDateString,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -22,6 +23,7 @@ export class CreateAssetDto {
 
   @IsNotEmpty()
   @IsString()
+  @IsEnum(AssetCategory)
   category: AssetCategory;
 
   @IsNotEmpty()
@@ -71,5 +73,3 @@ export class CreateAssetDto {
   @IsString()
   processor?: string;
 }
-
-
