@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -8,6 +9,7 @@ import { UpdateAssetDto } from './dto/update-asset.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Asset } from './entities/asset.entity';
 import { Repository } from 'typeorm';
+import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
 
 @Injectable()
 export class AssetsService {
@@ -17,12 +19,31 @@ export class AssetsService {
   ) {}
 
   async create(dto: CreateAssetDto) {
+    const serialNumberExist = await this.assetRepository.findOneBy({
+      serialNumber: dto.serialNumber,
+    });
+    const assetTagExist = await this.assetRepository.findOneBy({
+      assetTag: dto.assetTag,
+    });
+    if (assetTagExist && serialNumberExist) {
+      ErrorDetailBuilder.buildMany([
+        { field: 'assetTag', message: 'Asset Tag already exist' },
+        { field: 'serialNumber', message: 'Serial Number already exist' },
+      ]);
+    }
+    if (assetTagExist) {
+      throw new ConflictException(
+        ErrorDetailBuilder.buildOne('Asset Tag already exist', 'assetTag'),
+      );
+    } else if (serialNumberExist) {
+      throw new ConflictException(
+        ErrorDetailBuilder.buildOne(
+          'Serial Number already exist',
+          'serialNumber',
+        ),
+      );
+    }
     return await this.assetRepository.save(dto);
-    // try {
-    //   return await this.assetRepository.save(dto);
-    // } catch {
-    //   throw new ConflictException();
-    // }
   }
 
   async findAll() {
