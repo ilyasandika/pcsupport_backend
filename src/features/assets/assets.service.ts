@@ -75,7 +75,8 @@ export class AssetsService {
   async update(id: number, dto: UpdateAssetDto) {
     const asset = await this.assetRepository.findOneBy({ id });
     if (!asset) throw new NotFoundException('asset not found');
-    return await this.assetRepository.save(dto);
+    this.assetRepository.merge(asset, dto);
+    return await this.assetRepository.save(asset);
   }
 
   async remove(id: number) {
