@@ -1,5 +1,4 @@
 import { ErrorDetail } from '../interfaces/exception.interface';
-import { Logger } from '@nestjs/common';
 
 export class ErrorDetailBuilder {
   static buildOne(message: string | string[], field: string): ErrorDetail[] {

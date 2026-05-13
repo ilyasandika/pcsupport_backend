@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { UsersModule } from './features/users/users.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
@@ -10,6 +10,7 @@ import { AssetsModule } from './features/assets/assets.module';
 import { WorkLocationsModule } from './features/work-locations/work-locations.module';
 import { VendorsModule } from './features/vendors/vendors.module';
 import { VendorSupportContactsModule } from './features/vendor_support_contacts/vendor_support_contacts.module';
+import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 
 @Module({
   imports: [
@@ -43,4 +44,8 @@ import { VendorSupportContactsModule } from './features/vendor_support_contacts/
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes('*');
+  }
+}
