@@ -42,12 +42,12 @@ export class UsersController {
     return this.usersService.findOne(+id);
   }
 
-  @Put(':id')
+  @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.update(+id, dto);
   }
 
-  @Put('password/:id')
+  @Patch('password/:id')
   updatePassword(@Param('id') id: string, @Body() dto: UpdateUserPasswordDto) {
     return this.usersService.updatePassword(+id, dto);
   }
