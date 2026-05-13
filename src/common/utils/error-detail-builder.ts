@@ -1,14 +1,14 @@
 import { ErrorDetail } from '../interfaces/exception.interface';
+import { Logger } from '@nestjs/common';
 
 export class ErrorDetailBuilder {
-  static buildOne(
-    message: string | string[],
-    field: string = 'general',
-  ): ErrorDetail {
-    return {
-      field: field,
-      message: Array.isArray(message) ? message : [message],
-    };
+  static buildOne(message: string | string[], field: string): ErrorDetail[] {
+    return [
+      {
+        field: field || 'general',
+        message: Array.isArray(message) ? message : [message],
+      },
+    ];
   }
 
   static buildMany(

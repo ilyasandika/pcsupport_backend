@@ -2,6 +2,8 @@ import {
   GeneralErrorResponse,
   ErrorDetail,
 } from '../interfaces/exception.interface';
+import { Logger } from '@nestjs/common';
+import { ErrorDetailBuilder } from './error-detail-builder';
 
 export class ErrorResponseBuilder {
   static build(
@@ -17,9 +19,9 @@ export class ErrorResponseBuilder {
 
     if (this.isErrorDetail(errors)) {
       sanitizedErrors = [errors];
-    } else if (Array.isArray(errors) && typeof errors[0] === 'object') {
-      sanitizedErrors = errors as unknown as ErrorDetail[];
-    } else if (Array.isArray(errors)) {
+    } else if (this.isErrorDetailArray(errors)) {
+      sanitizedErrors = errors;
+    } else if (Array.isArray(errors) && typeof errors[0] === 'string') {
       sanitizedErrors = [{ field: 'general', message: errors }];
     } else {
       sanitizedErrors = [{ field: 'general', message: [String(errors)] }];
@@ -36,6 +38,16 @@ export class ErrorResponseBuilder {
     };
   }
 
-  private static isErrorDetail = (errors: unknown): errors is ErrorDetail =>
-    (errors as ErrorDetail).field !== undefined;
+  private static isErrorDetail = (errors: unknown): errors is ErrorDetail => {
+    return (
+      typeof errors === 'object' &&
+      errors !== null &&
+      !Array.isArray(errors) &&
+      'field' in errors
+    );
+  };
+  private static isErrorDetailArray = (
+    errors: unknown,
+  ): errors is ErrorDetail[] =>
+    (errors as ErrorDetail[])[0].field !== undefined;
 }

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateAssetDto } from './dto/create-asset.dto';
@@ -25,13 +26,15 @@ export class AssetsService {
     const assetTagExist = await this.assetRepository.findOneBy({
       assetTag: dto.assetTag,
     });
+
     if (assetTagExist && serialNumberExist) {
-      ErrorDetailBuilder.buildMany([
-        { field: 'assetTag', message: 'Asset Tag already exist' },
-        { field: 'serialNumber', message: 'Serial Number already exist' },
-      ]);
-    }
-    if (assetTagExist) {
+      throw new ConflictException(
+        ErrorDetailBuilder.buildMany([
+          { field: 'assetTag', message: 'Asset Tag already exist' },
+          { field: 'serialNumber', message: 'Serial Number already exist' },
+        ]),
+      );
+    } else if (assetTagExist) {
       throw new ConflictException(
         ErrorDetailBuilder.buildOne('Asset Tag already exist', 'assetTag'),
       );

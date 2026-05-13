@@ -4,6 +4,7 @@ import {
   ArgumentsHost,
   HttpException,
   HttpExceptionBody,
+  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ErrorResponseBuilder } from '../utils/error-response-builder';
