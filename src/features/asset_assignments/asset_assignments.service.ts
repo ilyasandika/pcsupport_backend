@@ -19,17 +19,44 @@ export class AssetAssignmentsService {
   ) {}
 
   async create(dto: CreateAssetAssignmentDto) {
-
-    const newAssignDate = new Date(dto.assignedAt);
-
-    const overlappingAssignment = await this.assetAssignmentRepository.findOne({
+    const lastUse = await this.assetAssignmentRepository.findOne({
       where: {
-        assignedAt: LessThanOrEqual(newAssignDate),
         assetId: dto.assetId,
-        returnedAt: MoreThanOrEqual(newAssignDate),
+        returnedAt: IsNull(),
       },
     });
 
+    if (lastUse) {
+      if (new Date(dto.assignedAt) > new Date(lastUse?.assignedAt)) {
+        throw new BadRequestException(
+          ErrorDetailBuilder.buildOne(
+            'assign date cannot overlap current assignment date',
+            'assignedAt',
+          ),
+        );
+      }
+    }
+
+    if (!dto.isLegacyData && lastUse) {
+      throw new BadRequestException(
+        ErrorDetailBuilder.buildOne('asset is currently use', 'assetId'),
+      );
+    }
+
+    // A <= D && B>=C
+    // A = Assign Baru
+    // D = Return Lama
+    // B = Return Baru
+    // C = Assign Lama
+    const overlappingAssignment = await this.assetAssignmentRepository.findOne({
+      where: {
+        assetId: dto.assetId,
+        assignedAt: LessThanOrEqual(
+          dto.returnedAt ? new Date(dto.returnedAt) : new Date('9999-12-31'),
+        ),
+        returnedAt: MoreThanOrEqual(new Date(dto.assignedAt)),
+      },
+    });
     if (overlappingAssignment) {
       throw new BadRequestException(
         ErrorDetailBuilder.buildOne(
@@ -37,20 +64,6 @@ export class AssetAssignmentsService {
           'assignedAt',
         ),
       );
-    }
-    if (!dto.isLegacyData) {
-      const isUse = await this.assetAssignmentRepository.findOne({
-        where: {
-          assetId: dto.assetId,
-          returnedAt: IsNull(),
-        },
-      });
-
-      if (isUse) {
-        throw new BadRequestException(
-          ErrorDetailBuilder.buildOne('asset is currently use', 'assetId'),
-        );
-      }
     }
 
     const employee = await this.employeeService.findOne(dto.picEmployeeId);
@@ -61,35 +74,56 @@ export class AssetAssignmentsService {
     return await this.assetAssignmentRepository.save(assignment);
   }
 
-  async findLatestByAssetId(assetId: number) {
-    return await this.assetAssignmentRepository.findOne({
+  async findAllByAssetId(assetId: number) {
+    return await this.assetAssignmentRepository.find({
       where: {
         assetId,
       },
       order: {
         assignedAt: 'DESC',
       },
-    });
-  }
-
-  async findLatestByEmployeeId(employeeId: number) {
-    return await this.assetAssignmentRepository.findOne({
-      where: [{ picEmployeeId: employeeId }, { userEmployeeId: employeeId }],
-      order: {
-        assignedAt: 'DESC',
+      relations: {
+        employee: true,
+        asset: true,
       },
     });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} assetAssignment`;
+  async findAllByEmployeeId(employeeId: number) {
+    return await this.assetAssignmentRepository.find({
+      where: { picEmployeeId: employeeId },
+      order: {
+        assignedAt: 'DESC',
+      },
+      relations: {
+        employee: true,
+        asset: true,
+      },
+    });
   }
 
-  update(id: number, updateAssetAssignmentDto: UpdateAssetAssignmentDto) {
-    return `This action updates a #${id} assetAssignment`;
+  async findOne(id: number) {
+    try {
+      return await this.assetAssignmentRepository.findOneByOrFail({ id });
+    } catch {
+      throw new NotFoundException('assignment not found');
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} assetAssignment`;
+  async update(id: number, dto: UpdateAssetAssignmentDto) {
+    const assignment = await this.assetAssignmentRepository.findOneBy({ id });
+    if (!assignment) {
+      throw new NotFoundException('assignment not found');
+    }
+    this.assetAssignmentRepository.merge(assignment, dto);
+    return await this.assetAssignmentRepository.save(assignment);
+  }
+
+  async remove(id: number) {
+    const assignment = await this.assetAssignmentRepository.findOneBy({ id });
+    if (!assignment) {
+      throw new NotFoundException('assignment not found');
+    }
+    return await this.assetAssignmentRepository.remove(assignment);
   }
 }

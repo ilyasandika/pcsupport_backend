@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { AssetAssignmentsService } from './asset_assignments.service';
 import { CreateAssetAssignmentDto } from './dto/create-asset_assignment.dto';
 import { UpdateAssetAssignmentDto } from './dto/update-asset_assignment.dto';
@@ -13,19 +21,29 @@ export class AssetAssignmentsController {
   async create(@Body() dto: CreateAssetAssignmentDto) {
     return await this.assetAssignmentsService.create(dto);
   }
-  //
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.assetAssignmentsService.findOne(+id);
-  // }
 
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateAssetAssignmentDto: UpdateAssetAssignmentDto) {
-  //   return this.assetAssignmentsService.update(+id, updateAssetAssignmentDto);
-  // }
-  //
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.assetAssignmentsService.remove(+id);
-  // }
+  @Get('assets/:id')
+  async findByAssetId(@Param('id') id: string) {
+    return await this.assetAssignmentsService.findAllByAssetId(+id);
+  }
+
+  @Get('employees/:id')
+  async findByEmployeeId(@Param('id') id: string){
+    return await this.assetAssignmentsService.findAllByEmployeeId(+id);
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return await this.assetAssignmentsService.findOne(+id);
+  }
+
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateAssetAssignmentDto) {
+    return await this.assetAssignmentsService.update(+id, dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.assetAssignmentsService.remove(+id);
+  }
 }

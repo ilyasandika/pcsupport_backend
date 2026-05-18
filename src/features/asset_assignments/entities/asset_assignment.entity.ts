@@ -29,12 +29,6 @@ export class AssetAssignment {
   picEmployeeId: number;
 
   @Column({
-    name: 'user_employee_id',
-    nullable: true,
-  })
-  userEmployeeId?: number;
-
-  @Column({
     name: 'user_non_employee_name',
     nullable: true,
   })
@@ -42,12 +36,14 @@ export class AssetAssignment {
 
   @Column({
     name: 'assigned_at',
+    type: 'date',
   })
   assignedAt: Date;
 
   @Column({
     name: 'returned_at',
     nullable: true,
+    type: 'date',
   })
   returnedAt?: Date;
 

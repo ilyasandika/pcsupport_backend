@@ -1,6 +1,6 @@
 import {
   IsBoolean,
-  IsDateString,
+  IsDateString, isEmpty,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -19,10 +19,6 @@ export class CreateAssetAssignmentDto {
   @IsNumber()
   @IsNotEmpty()
   picEmployeeId: number;
-
-  @IsNumber()
-  @IsOptional()
-  userEmployeeId?: number;
 
   @IsString()
   @IsOptional()
@@ -53,5 +49,16 @@ export class CreateAssetAssignmentDto {
 
   @IsOptional()
   @IsBoolean()
+  @ValidateIf((o: AssetAssignment) => {
+    if (o.isLegacyData && isEmpty(o.returnedAt)) {
+      throw new BadRequestException(
+        ErrorDetailBuilder.buildOne(
+          'return date must be not empty',
+          'returnedAt',
+        ),
+      );
+    }
+    return true;
+  })
   isLegacyData: boolean;
 }
