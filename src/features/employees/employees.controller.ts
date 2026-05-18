@@ -17,7 +17,7 @@ export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
   @Post('import-csv')
-  @UseInterceptors(FileInterceptor('file')) // 'file' must match the key in Postman/Frontend
+  @UseInterceptors(FileInterceptor('file'))
   async importCsv(
     @UploadedFile(
       new ParseFilePipe({
@@ -26,7 +26,7 @@ export class EmployeesController {
           new FileTypeValidator({
             fileType: 'text/csv',
             skipMagicNumbersValidation: true,
-          }), // Ensure it's a CSV
+          }),
         ],
       }),
     )
@@ -42,6 +42,6 @@ export class EmployeesController {
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return await this.employeesService.findOne(id);
+    return await this.employeesService.findOne(+id);
   }
 }

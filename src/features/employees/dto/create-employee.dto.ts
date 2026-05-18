@@ -1,7 +1,7 @@
 import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
 
 export class CreateEmployeeDto {
-  employeeId: string;
+  nik: string;
   name: string;
   contractType: EmployeeContractType;
   position: string;

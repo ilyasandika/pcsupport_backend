@@ -3,7 +3,7 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
-  ManyToOne,
+  ManyToOne, OneToMany,
   PrimaryGeneratedColumn,
   Unique,
   UpdateDateColumn,
@@ -11,6 +11,8 @@ import {
 import { AssetCategory } from '../../../common/enums/asset-type.enum';
 import { WorkLocation } from '../../work-locations/entities/work-location.entity';
 import { Vendor } from '../../vendors/entities/vendor.entity';
+import { VendorSupportContact } from '../../vendor_support_contacts/entities/vendor_support_contact.entity';
+import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
 
 @Entity({
   name: 'assets',
@@ -112,4 +114,7 @@ export class Asset {
   @ManyToOne(() => Vendor, (vendor) => vendor.assets)
   @JoinColumn({ name: 'vendor_id' })
   vendor: Vendor;
+
+  @OneToMany(() => AssetAssignment, (assetAssignment) => assetAssignment.asset)
+  assetAssignments: AssetAssignment[];
 }

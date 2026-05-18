@@ -11,6 +11,7 @@ import { WorkLocationsModule } from './features/work-locations/work-locations.mo
 import { VendorsModule } from './features/vendors/vendors.module';
 import { VendorSupportContactsModule } from './features/vendor_support_contacts/vendor_support_contacts.module';
 import { LoggerMiddleware } from './common/middlewares/logger.middleware';
+import { AssetAssignmentsModule } from './features/asset_assignments/asset_assignments.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { LoggerMiddleware } from './common/middlewares/logger.middleware';
     WorkLocationsModule,
     VendorsModule,
     VendorSupportContactsModule,
+    AssetAssignmentsModule,
   ],
   controllers: [],
   providers: [],

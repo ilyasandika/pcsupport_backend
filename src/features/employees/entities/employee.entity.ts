@@ -2,11 +2,14 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
+import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
+import { Asset } from '../../assets/entities/asset.entity';
 
 @Entity({
   name: 'employees',
@@ -16,10 +19,9 @@ export class Employee {
   id: number;
 
   @Column({
-    name: 'employee_id',
     unique: true,
   })
-  employeeId: string;
+  nik: string;
 
   @Column()
   name: string;
@@ -75,4 +77,10 @@ export class Employee {
     name: 'updated_at',
   })
   updatedAt: Date;
+
+  @OneToMany(
+    () => AssetAssignment,
+    (assetAssignment) => assetAssignment.employee,
+  )
+  assetAssignments: AssetAssignment[];
 }

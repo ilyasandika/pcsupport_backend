@@ -45,25 +45,24 @@ export class DatabaseExceptionFilter implements ExceptionFilter {
     const drv = exception.driverError as DatabaseError;
     const errorCode = drv.code;
 
-    if (errorCode == '23505') {
-      const field = this.extractFieldFromDetail(drv.detail!);
-      const errorMessage = {
-        field: field,
-        message: [`${field} already exist`],
-      };
-      response
-        .status(HttpStatus.CONFLICT)
-        .json(
-          ErrorResponseBuilder.build(
-            false,
-            HttpStatus.CONFLICT,
-            'duplicate resource',
-            errorMessage,
-            request.method,
-            request.url,
-            new Date().toISOString(),
-          ),
-        );
-    }
+    const field = this.extractFieldFromDetail(drv.detail!);
+    const errorMessage = {
+      field: field,
+      message: [drv.detail as string],
+    };
+
+    response
+      .status(HttpStatus.CONFLICT)
+      .json(
+        ErrorResponseBuilder.build(
+          false,
+          errorCode == '23505' ? HttpStatus.CONFLICT : 500,
+          errorCode == '23505' ? 'duplicate resource' : 'server error',
+          errorMessage,
+          request.method,
+          request.url,
+          new Date().toISOString(),
+        ),
+      );
   }
 }
