@@ -37,5 +37,5 @@ export class Vendor {
     () => VendorSupportContact,
     (vendorSupportContact) => vendorSupportContact.vendor,
   )
-  vendorSupportContacts: VendorSupportContact[];
+  contacts: VendorSupportContact[];
 }

@@ -3,10 +3,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { Ticket } from '../../tickets/entities/ticket.entity';
 
 @Entity({
   name: 'users',
@@ -53,4 +55,10 @@ export class User {
     name: 'updated_at',
   })
   updatedAt: Date;
+
+  @OneToMany(() => Ticket, (ticket) => ticket.employee)
+  tickets: Ticket[];
+
+  @OneToMany(() => Ticket, (ticket) => ticket.createdBy)
+  createdTickets: Ticket[];
 }

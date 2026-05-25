@@ -13,6 +13,7 @@ import { WorkLocation } from '../../work-locations/entities/work-location.entity
 import { Vendor } from '../../vendors/entities/vendor.entity';
 import { VendorSupportContact } from '../../vendor_support_contacts/entities/vendor_support_contact.entity';
 import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
+import { Ticket } from '../../tickets/entities/ticket.entity';
 
 @Entity({
   name: 'assets',
@@ -117,4 +118,7 @@ export class Asset {
 
   @OneToMany(() => AssetAssignment, (assetAssignment) => assetAssignment.asset)
   assetAssignments: AssetAssignment[];
+
+  @OneToMany(() => Ticket, (ticket) => ticket.asset)
+  tickets: Ticket[];
 }

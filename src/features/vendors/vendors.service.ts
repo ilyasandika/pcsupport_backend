@@ -16,12 +16,21 @@ export class VendorsService {
   }
 
   async findAll() {
-    return await this.vendorRepository.find();
+    return await this.vendorRepository.find({
+      relations: {
+        contacts: true,
+      },
+    });
   }
 
   async findOne(id: number) {
     try {
-      return await this.vendorRepository.findOneByOrFail({ id });
+      return await this.vendorRepository.findOneOrFail({
+        where: { id },
+        relations: {
+          contacts: true,
+        },
+      });
     } catch {
       throw new NotFoundException('vendor not found');
     }

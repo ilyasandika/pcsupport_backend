@@ -10,6 +10,7 @@ import {
 import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
 import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
 import { Asset } from '../../assets/entities/asset.entity';
+import { Ticket } from '../../tickets/entities/ticket.entity';
 
 @Entity({
   name: 'employees',
@@ -83,4 +84,7 @@ export class Employee {
     (assetAssignment) => assetAssignment.employee,
   )
   assetAssignments: AssetAssignment[];
+
+  @OneToMany(() => Ticket, (ticket) => ticket.employee)
+  tickets: Ticket[];
 }

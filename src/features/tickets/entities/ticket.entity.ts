@@ -1,0 +1,112 @@
+import {
+  Column,
+  CreateDateColumn,
+  Entity, JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { TicketStatus } from '../../../common/enums/ticket-status.enum';
+import { Asset } from '../../assets/entities/asset.entity';
+import { Employee } from '../../employees/entities/employee.entity';
+import { User } from '../../users/entities/user.entity';
+
+@Entity({
+  name: 'tickets',
+})
+export class Ticket {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({
+    name: 'sequence_number',
+    unique: true,
+  })
+  sequenceNumber: number;
+
+  @Column({
+    name: 'full_number',
+    unique: true,
+    nullable: true,
+  })
+  fullNumber: string;
+
+  @Column({
+    name: 'asset_id',
+    nullable: true,
+  })
+  assetId?: number;
+
+  @ManyToOne(() => Asset, (asset) => asset.tickets)
+  @JoinColumn({ name: 'asset_id' })
+  asset: Asset;
+
+  @Column({
+    name: 'employee_id',
+    nullable: true,
+  })
+  employeeId?: number;
+
+  @ManyToOne(() => Employee, (employee) => employee.tickets)
+  @JoinColumn({ name: 'employee_id' })
+  employee: Employee;
+
+  @Column({
+    name: 'engineer_id',
+    nullable: true,
+  })
+  engineerId?: number;
+
+  @ManyToOne(() => User, (user) => user.tickets)
+  @JoinColumn({ name: 'engineer_id' })
+  engineer: User;
+
+  @Column({
+    name: 'created_by_user_id',
+  })
+  createdByUserId: number;
+
+  @ManyToOne(() => User, (user) => user.tickets)
+  @JoinColumn({ name: 'created_by_user_id' })
+  createdBy: User;
+
+  @Column()
+  problem: string;
+
+  @Column({
+    default: TicketStatus.Open,
+  })
+  status: TicketStatus;
+
+  @Column({
+    nullable: true,
+  })
+  solution?: string;
+
+  @Column({
+    nullable: true,
+    name: 'start_at',
+  })
+  startAt: Date;
+
+  @Column({
+    name: 'solved_at',
+    nullable: true,
+  })
+  solvedAt?: Date;
+
+  @Column({
+    nullable: true,
+  })
+  remarks?: string;
+
+  @CreateDateColumn({
+    name: 'created_at',
+  })
+  createdAt: Date;
+
+  @UpdateDateColumn({
+    name: 'updated_at',
+  })
+  updatedAt: Date;
+}

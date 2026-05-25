@@ -48,7 +48,7 @@ export class VendorSupportContact {
 
   //relations
 
-  @ManyToOne(() => Vendor, (vendor) => vendor.vendorSupportContacts)
+  @ManyToOne(() => Vendor, (vendor) => vendor.contacts)
   @JoinColumn({
     name: 'vendor_id',
   })
