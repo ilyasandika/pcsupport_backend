@@ -15,5 +15,6 @@ import { AssetsModule } from '../assets/assets.module';
   ],
   controllers: [AssetAssignmentsController],
   providers: [AssetAssignmentsService],
+  exports: [AssetAssignmentsService],
 })
 export class AssetAssignmentsModule {}

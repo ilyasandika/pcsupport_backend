@@ -3,7 +3,13 @@ import { CreateAssetAssignmentDto } from './dto/create-asset_assignment.dto';
 import { UpdateAssetAssignmentDto } from './dto/update-asset_assignment.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AssetAssignment } from './entities/asset_assignment.entity';
-import { IsNull, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import {
+  EntityManager,
+  IsNull,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { EmployeesService } from '../employees/employees.service';
 import { AssetsService } from '../assets/assets.service';
 import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
@@ -100,6 +106,21 @@ export class AssetAssignmentsService {
         asset: true,
       },
     });
+  }
+
+  async findLatestByAssetId(assetId: number, manager?: EntityManager) {
+    try {
+
+      const repo = manager? manager.getRepository(AssetAssignment) : this.assetAssignmentRepository;
+      return await repo.findOneOrFail({
+        where: { assetId },
+        order: {
+          assignedAt: 'DESC',
+        },
+      });
+    } catch {
+      throw new NotFoundException('assignment not fount');
+    }
   }
 
   async findOne(id: number) {

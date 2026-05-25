@@ -34,6 +34,7 @@ export class TicketsController {
   }
 
   @Patch('claim/:id')
+  @Roles(Role.Engineer)
   async claim(
     @Param('id') id: string,
     @GetUser() user: jwtPayloadInterface.JwtPayload,

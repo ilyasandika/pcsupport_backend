@@ -1,7 +1,8 @@
 import {
-  BadRequestException,
+  BadRequestException, HttpException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -11,15 +12,18 @@ import { Ticket } from './entities/ticket.entity';
 import { Repository } from 'typeorm';
 import Mustache from 'mustache';
 import { TicketStatus } from '../../common/enums/ticket-status.enum';
+import { AssetAssignmentsService } from '../asset_assignments/asset_assignments.service';
 
 @Injectable()
 export class TicketsService {
   constructor(
     @InjectRepository(Ticket)
     private readonly ticketRepository: Repository<Ticket>,
+    private readonly assetAssignmentService: AssetAssignmentsService,
   ) {}
 
   async create(dto: CreateTicketDto, creatorId: number) {
+
     try {
       return await this.ticketRepository.manager.transaction(
         async (manager) => {
@@ -28,6 +32,47 @@ export class TicketsService {
             order: { sequenceNumber: 'DESC' },
             lock: { mode: 'pessimistic_write' },
           });
+
+          // let assetOwner;
+          if (dto.assetId) {
+            const assetAssignment =
+              await this.assetAssignmentService.findLatestByAssetId(
+                dto.assetId,
+                manager,
+              );
+
+            if (assetAssignment) {
+
+              //dto employee id tidak sesuai dengan data kepemilikan asset dan belum dikembalikan
+              if (
+                dto.employeeId &&
+                assetAssignment.picEmployeeId != dto.employeeId &&
+                !assetAssignment.returnedAt
+              ) {
+                throw new BadRequestException(
+                  'the specified asset does not belong to this employee',
+                );
+              }
+
+              //dto employee ada, asset sudah dikembalikan.
+              if (dto.employeeId && assetAssignment.returnedAt) {
+                throw new BadRequestException(
+                  'the specified asset has returned, employee id should empty',
+                );
+              }
+
+              //dto employee id kosong dan asset belum dikembalikan.
+              if (dto.employeeId == undefined && !assetAssignment.returnedAt) {
+                throw new BadRequestException('this asset still have an owner');
+              }
+            } else {
+              if (dto.employeeId) {
+                throw new BadRequestException(
+                  'this is new asset, please assign the asset first',
+                );
+              }
+            }
+          }
 
           const nextNumber: number = latestTicket
             ? latestTicket.sequenceNumber + 1
@@ -57,7 +102,10 @@ export class TicketsService {
           return await manager.save(Ticket, newTicket);
         },
       );
-    } catch {
+    } catch (e) {
+      if (e instanceof HttpException) {
+        throw e;
+      }
       throw new InternalServerErrorException('server is busy');
     }
   }
