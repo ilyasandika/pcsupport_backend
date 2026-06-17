@@ -9,7 +9,7 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Ticket } from './entities/ticket.entity';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import Mustache from 'mustache';
 import { TicketStatus } from '../../common/enums/ticket-status.enum';
 import { AssetAssignmentsService } from '../asset_assignments/asset_assignments.service';
@@ -23,16 +23,9 @@ export class TicketsService {
   ) {}
 
   async create(dto: CreateTicketDto, creatorId: number) {
-
     try {
       return await this.ticketRepository.manager.transaction(
         async (manager) => {
-          const latestTicket = await manager.findOne(Ticket, {
-            where: {},
-            order: { sequenceNumber: 'DESC' },
-            lock: { mode: 'pessimistic_write' },
-          });
-
           // let assetOwner;
           if (dto.assetId) {
             const assetAssignment =
@@ -42,7 +35,6 @@ export class TicketsService {
               );
 
             if (assetAssignment) {
-
               //dto employee id tidak sesuai dengan data kepemilikan asset dan belum dikembalikan
               if (
                 dto.employeeId &&
@@ -74,18 +66,18 @@ export class TicketsService {
             }
           }
 
+          const latestTicket = await manager.findOne(Ticket, {
+            where: {},
+            order: { sequenceNumber: 'DESC' },
+            lock: { mode: 'pessimistic_write' },
+          });
           const nextNumber: number = latestTicket
             ? latestTicket.sequenceNumber + 1
             : 1;
 
-          let fullNumber: string | undefined;
-          if (dto.engineerId) {
-            fullNumber = dto.fullNumberTemplate
-              ? Mustache.render(dto.fullNumberTemplate, {
-                  sequenceNumber: nextNumber,
-                })
-              : `${new Date().getFullYear() % 100}-${nextNumber}`;
-          }
+          const fullNumber = dto.engineerId
+            ? await this.getFullNumber(manager, dto.fullNumberTemplate)
+            : undefined;
 
           const newTicket = manager.create(Ticket, {
             ...dto,
@@ -120,11 +112,19 @@ export class TicketsService {
             lock: { mode: 'pessimistic_write' },
           });
 
+          if (ticket?.engineerId)
+            throw new BadRequestException(
+              'ticket has been claimed by another engineer',
+            );
+
+          const fullNumber = await this.getFullNumber(manager);
+
           if (!ticket) throw new NotFoundException('ticket not found');
 
           ticket.engineerId = engineerId;
           ticket.startAt = new Date();
           ticket.status = TicketStatus.InProgress;
+          ticket.fullNumber = fullNumber;
 
           const updatedTicket = manager.create(Ticket, ticket);
           return await manager.save(Ticket, updatedTicket);
@@ -138,9 +138,12 @@ export class TicketsService {
   async findAll() {
     return await this.ticketRepository.find({
       relations: {
-        asset: true,
+        asset: {
+          assetAssignments: true,
+        },
         createdBy: true,
         engineer: true,
+        employee: true,
       },
     });
   }
@@ -169,5 +172,26 @@ export class TicketsService {
 
   async remove(id: number) {
     return `This action removes a #${id} ticket`;
+  }
+
+  private async getFullNumber(
+    manager: EntityManager,
+    template?: string,
+  ): Promise<string> {
+    const latestTicket = await manager.findOne(Ticket, {
+      where: {},
+      order: { sequenceNumber: 'DESC' },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    const nextNumber: number = latestTicket
+      ? latestTicket.sequenceNumber + 1
+      : 1;
+
+    return template
+      ? Mustache.render(template, {
+          sequenceNumber: nextNumber,
+        })
+      : `${new Date().getFullYear() % 100}-${nextNumber}`;
   }
 }

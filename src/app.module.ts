@@ -13,6 +13,8 @@ import { VendorSupportContactsModule } from './features/vendor_support_contacts/
 import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 import { AssetAssignmentsModule } from './features/asset_assignments/asset_assignments.module';
 import { TicketsModule } from './features/tickets/tickets.module';
+import { AssetSupportsModule } from './features/asset_supports/asset_supports.module';
+import { ProjectsModule } from './features/projects/projects.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { TicketsModule } from './features/tickets/tickets.module';
     VendorSupportContactsModule,
     AssetAssignmentsModule,
     TicketsModule,
+    AssetSupportsModule,
+    ProjectsModule,
   ],
   controllers: [],
   providers: [],

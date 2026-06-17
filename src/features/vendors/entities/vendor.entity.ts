@@ -29,10 +29,6 @@ export class Vendor {
   updatedAt: Date;
 
   // relations
-
-  @OneToMany(() => Asset, (asset) => asset.vendor)
-  assets: Asset[];
-
   @OneToMany(
     () => VendorSupportContact,
     (vendorSupportContact) => vendorSupportContact.vendor,

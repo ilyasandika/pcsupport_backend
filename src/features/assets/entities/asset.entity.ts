@@ -14,6 +14,8 @@ import { Vendor } from '../../vendors/entities/vendor.entity';
 import { VendorSupportContact } from '../../vendor_support_contacts/entities/vendor_support_contact.entity';
 import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
 import { Ticket } from '../../tickets/entities/ticket.entity';
+import { AssetSupport } from '../../asset_supports/entities/asset_support.entity';
+import { Project } from '../../projects/entities/project.entity';
 
 @Entity({
   name: 'assets',
@@ -68,10 +70,10 @@ export class Asset {
   purchaseDate?: Date;
 
   @Column({
-    name: 'vendor_id',
+    name: 'project_id',
     select: false,
   })
-  vendorId: number;
+  projectId: number;
 
   @Column({
     name: 'storage_type',
@@ -112,13 +114,16 @@ export class Asset {
   @JoinColumn({ name: 'work_location_id' })
   workLocation: WorkLocation;
 
-  @ManyToOne(() => Vendor, (vendor) => vendor.assets)
-  @JoinColumn({ name: 'vendor_id' })
-  vendor: Vendor;
+  @ManyToOne(() => Project, (project) => project.assets)
+  @JoinColumn({ name: 'project_id' })
+  project: Project;
 
   @OneToMany(() => AssetAssignment, (assetAssignment) => assetAssignment.asset)
   assetAssignments: AssetAssignment[];
 
   @OneToMany(() => Ticket, (ticket) => ticket.asset)
   tickets: Ticket[];
+
+  @OneToMany(() => AssetSupport, (support) => support.asset)
+  supports: AssetSupport[];
 }

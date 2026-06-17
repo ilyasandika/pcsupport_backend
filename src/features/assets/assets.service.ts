@@ -1,8 +1,6 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateAssetDto } from './dto/create-asset.dto';
@@ -53,7 +51,8 @@ export class AssetsService {
     return await this.assetRepository.find({
       relations: {
         workLocation: true,
-        vendor: true,
+        project: true,
+        supports: true,
       },
     });
   }
@@ -64,7 +63,8 @@ export class AssetsService {
         where: { id },
         relations: {
           workLocation: true,
-          vendor: true,
+          project: true,
+          supports: true,
         },
       });
     } catch {
