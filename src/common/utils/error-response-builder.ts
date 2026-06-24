@@ -3,7 +3,7 @@ import {
   ErrorDetail,
 } from '../interfaces/exception.interface';
 import { Logger } from '@nestjs/common';
-import { ErrorDetailBuilder } from './error-detail-builder';
+
 
 export class ErrorResponseBuilder {
   static build(

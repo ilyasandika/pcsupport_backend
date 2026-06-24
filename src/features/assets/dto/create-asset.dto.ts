@@ -37,7 +37,7 @@ export class CreateAssetDto {
   @IsNumber()
   workLocationId: number;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   projectName?: string;
 
@@ -48,10 +48,6 @@ export class CreateAssetDto {
   @IsOptional()
   @IsDateString()
   purchaseDate?: Date;
-
-  @IsNotEmpty()
-  @IsNumber()
-  vendorId: number;
 
   @IsOptional()
   @IsString()

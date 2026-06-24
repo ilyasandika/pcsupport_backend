@@ -1,0 +1,75 @@
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "username": "iandika",
+  "password": "iandika123",
+  "email": "iandika@gmail.com",
+  "fullName": "Ilyas Andika",
+  "role": "engineer"
+}
+
+###
+
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "username": "yseptiana",
+  "password": "yseptiana123",
+  "email": "yseptiana@gmail.com",
+  "fullName": "Yani Septiana",
+  "role": "engineer"
+}
+
+###
+
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "username": "tpsari",
+  "password": "tpsari123",
+  "email": "tpsari@gmail.com",
+  "fullName": "Triani Purnama Sari",
+  "role": "engineer"
+}
+
+###
+
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "username": "bsantoso",
+  "password": "bsantoso123",
+  "email": "bsantoso@gmail.com",
+  "fullName": "Budi Santoso",
+  "role": "helpdesk"
+}
+
+###
+
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "username": "ewijaya",
+  "password": "ewijaya123",
+  "email": "ewijaya@gmail.com",
+  "fullName": "Eva Wijaya",
+  "role": "helpdesk"
+}
+
+###
+
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123",
+  "email": "admins@gmail.com",
+  "fullName": "Ilyas Andika",
+  "role": "admin"
+}

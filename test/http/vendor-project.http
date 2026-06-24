@@ -1,0 +1,83 @@
+### =================================================================
+### PROJECT FOR VENDOR ID: 1 (PT. Mitra Integrasi Informatika)
+### =================================================================
+
+POST http://localhost:3000/projects
+Content-Type: application/json
+
+{
+  "name": "SPPH 3597",
+  "vendorId": 1
+}
+
+### =================================================================
+### PROJECT FOR VENDOR ID: 3 (PT. Synnovax)
+### =================================================================
+
+POST http://localhost:3000/projects
+Content-Type: application/json
+
+{
+  "name": "SPPH 3610",
+  "vendorId": 3
+}
+
+### =================================================================
+### PROJECT FOR VENDOR ID: 4 (PT Mitra Integrasi Informatika - Branch)
+### =================================================================
+
+POST http://localhost:3000/projects
+Content-Type: application/json
+
+{
+  "name": "SPPH 3598",
+  "vendorId": 4
+}
+
+### =================================================================
+### PROJECT FOR VENDOR ID: 5 (PT Telekomunikasi Indonesia Tbk)
+### =================================================================
+
+POST http://localhost:3000/projects
+Content-Type: application/json
+
+{
+  "name": "SPPH 3702",
+  "vendorId": 5
+}
+
+### =================================================================
+### PROJECT FOR VENDOR ID: 6 (PT Mastersystem Infotama)
+### =================================================================
+
+POST http://localhost:3000/projects
+Content-Type: application/json
+
+{
+  "name": "SPPH 3815",
+  "vendorId": 6
+}
+
+### =================================================================
+### PROJECT FOR VENDOR ID: 7 (PT Anabatic Technologies Tbk)
+### =================================================================
+
+POST http://localhost:3000/projects
+Content-Type: application/json
+
+{
+  "name": "SPPH 3900",
+  "vendorId": 7
+}
+
+### =================================================================
+### PROJECT FOR VENDOR ID: 8 (PT Metrodata Electronics Tbk)
+### =================================================================
+
+POST http://localhost:3000/projects
+Content-Type: application/json
+
+{
+  "name": "SPPH 4012",
+  "vendorId": 8
+}

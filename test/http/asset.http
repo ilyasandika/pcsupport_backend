@@ -1,0 +1,119 @@
+### =================================================================
+### ASSET 1: Notebook Lenovo (Tahun 25, Kategori 1, Merk 2, Urutan 0001)
+### =================================================================
+POST http://localhost:3000/assets
+Content-Type: application/json
+
+{
+  "serialNumber": "PF4X9ABC",
+  "assetTag": "25120001",
+  "hostname": "25120001NB",
+  "category": "nb",
+  "brand": "Lenovo",
+  "model": "ThinkPad L14 Gen 4",
+  "workLocationId": 7,
+  "projectName": "SPPH 3597",
+  "warrantyDate": "2028-05-10T00:00:00.000Z",
+  "purchaseDate": "2025-05-10T00:00:00.000Z",
+  "storageType": "SSD NVMe",
+  "storageCapacityByte": 512000000000,
+  "memoryType": "DDR4",
+  "memoryCapacityByte": 16000000000,
+  "processor": "Intel Core i5-1335U"
+}
+
+### =================================================================
+### ASSET 2: PC Desktop HP (Tahun 26, Kategori 2, Merk 1, Urutan 0002)
+### =================================================================
+POST http://localhost:3000/assets
+Content-Type: application/json
+
+{
+  "serialNumber": "SGH6120XYZ",
+  "assetTag": "26210002",
+  "hostname": "26210002PC",
+  "category": "pc",
+  "brand": "HP",
+  "model": "ProDesk 400 G9",
+  "workLocationId": 8,
+  "projectName": "SPPH 3610",
+  "warrantyDate": "2029-01-15T00:00:00.000Z",
+  "purchaseDate": "2026-01-15T00:00:00.000Z",
+  "storageType": "SSD NVMe",
+  "storageCapacityByte": 256000000000,
+  "memoryType": "DDR4",
+  "memoryCapacityByte": 8000000000,
+  "processor": "Intel Core i3-12100"
+}
+
+### =================================================================
+### ASSET 3: Workstation Dell (Tahun 26, Kategori 3, Merk 3, Urutan 0003)
+### =================================================================
+POST http://localhost:3000/assets
+Content-Type: application/json
+
+{
+  "serialNumber": "CN0GHX829",
+  "assetTag": "26330003",
+  "hostname": "26330003WS",
+  "category": "ws",
+  "brand": "Dell",
+  "model": "Precision 3660 Tower",
+  "workLocationId": 9,
+  "projectName": "SPPH 3598",
+  "warrantyDate": "2031-03-20T00:00:00.000Z",
+  "purchaseDate": "2026-03-20T00:00:00.000Z",
+  "storageType": "SSD NVMe",
+  "storageCapacityByte": 1024000000000,
+  "memoryType": "DDR5",
+  "memoryCapacityByte": 32000000000,
+  "processor": "Intel Core i7-13700"
+}
+
+### =================================================================
+### ASSET 4: Mobile Workstation Asus (Tahun 26, Kategori 4, Merk 4, Urutan 0004)
+### =================================================================
+POST http://localhost:3000/assets
+Content-Type: application/json
+
+{
+  "serialNumber": "N8N0CV01G",
+  "assetTag": "26440004",
+  "hostname": "26440004MWS",
+  "category": "mws",
+  "brand": "Asus",
+  "model": "ProArt Studiobook 16",
+  "workLocationId": 10,
+  "projectName": "SPPH 3702",
+  "warrantyDate": "2028-02-11T00:00:00.000Z",
+  "purchaseDate": "2026-02-11T00:00:00.000Z",
+  "storageType": "SSD NVMe",
+  "storageCapacityByte": 2048000000000,
+  "memoryType": "DDR5",
+  "memoryCapacityByte": 64000000000,
+  "processor": "AMD Ryzen 9 7940HS"
+}
+
+### =================================================================
+### ASSET 5: Notebook HP (Tahun 25, Kategori 1, Merk 1, Urutan 0005)
+### =================================================================
+POST http://localhost:3000/assets
+Content-Type: application/json
+
+{
+  "serialNumber": "CND4519BBB",
+  "assetTag": "25110005",
+  "hostname": "25110005NB",
+  "category": "nb",
+  "brand": "HP",
+  "model": "EliteBook 840 G10",
+  "workLocationId": 11,
+  "projectName": "SPPH 3815",
+  "warrantyDate": "2028-08-24T00:00:00.000Z",
+  "purchaseDate": "2025-08-24T00:00:00.000Z",
+  "storageType": "SSD NVMe",
+  "storageCapacityByte": 512000000000,
+  "memoryType": "DDR5",
+  "memoryCapacityByte": 16000000000,
+  "processor": "Intel Core i7-1355U"
+}

@@ -1,0 +1,259 @@
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjExLCJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzgyMTE4ODYzLCJleHAiOjE3ODIyMDUyNjN9.0qKboLcJRVfA098W5zz0zz1oynRptBU_fmMe6IQ_Y4w
+### =================================================================
+### KONDISI 1: LENGKAP (Ada Asset, Employee, & Engineer) - Selesai/Progres
+### =================================================================
+
+# Tiket 1: Masalah Keyboard Laptop Jonathan (Closed Onsite oleh Engineer 6)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assetId": 60,
+  "employeeId": 32,
+  "engineerId": 6,
+  "status": "closed onsite",
+  "problem": "Beberapa tombol keyboard (huruf R dan T) tidak merespon saat diketik.",
+  "solution": "Melakukan penggantian part keyboard internal Laptop EliteBook.",
+  "solvedAt": "2026-06-15T14:00:00.000Z",
+  "remarks": "Selesai dalam waktu 2 jam, part diambil dari gudang IT.",
+  "fullNumberTemplate": "TCK/202606/0001"
+}
+
+###
+
+# Tiket 2: Laptop Budi Lambat (In Progress oleh Engineer 7)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assetId": 56,
+  "employeeId": 35,
+  "engineerId": 7,
+  "status": "in progress",
+  "problem": "Laptop Lenovo nge-lag parah setelah update Windows terbaru, penggunaan disk selalu 100%.",
+  "remarks": "Sedang dilakukan pengecekan background services dan rencana roll-back update.",
+  "fullNumberTemplate": "TCK/202606/0002"
+}
+
+###
+
+# Tiket 3: PC Desktop Reza Blue Screen (Pending oleh Engineer 8)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assetId": 57,
+  "employeeId": 33,
+  "engineerId": 8,
+  "status": "pending",
+  "problem": "PC sering tiba-tiba BSOD (Blue Screen of Death) dengan kode error MEMORY_MANAGEMENT.",
+  "remarks": "Tiket di-pending karena harus menunggu kiriman part RAM baru dari vendor.",
+  "fullNumberTemplate": "TCK/202606/0003"
+}
+
+###
+
+# Tiket 4: Workstation Dewi Overheat (Closed Remote oleh Engineer 6)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assetId": 59,
+  "employeeId": 36,
+  "engineerId": 6,
+  "status": "closed remote",
+  "problem": "Fan berisik dan suhu laptop Asus ProArt mencapai 95 derajat saat rendering GIS.",
+  "solution": "Optimasi power management profile dan update BIOS via remote TeamViewer.",
+  "solvedAt": "2026-06-18T10:30:00.000Z",
+  "remarks": "Suhu kembali stabil di 75 derajat saat load tinggi.",
+  "fullNumberTemplate": "TCK/202606/0004"
+}
+
+###
+
+# Tiket 5: Tiket Berulang - Laptop Jonathan Terkena Virus (Closed Visit oleh Engineer 7)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assetId": 60,
+  "employeeId": 32,
+  "engineerId": 7,
+  "status": "closed visit",
+  "problem": "Muncul pop-up iklan aneh terus menerus di browser Chrome dan Edge.",
+  "solution": "Kunjungan ke meja user, membersihkan malware menggunakan Malwarebytes dan reset browser.",
+  "solvedAt": "2026-06-20T11:00:00.000Z",
+  "remarks": "User diedukasi agar tidak mengklik link download sembarangan.",
+  "fullNumberTemplate": "TCK/202606/0005"
+}
+
+
+### =================================================================
+### KONDISI 2: ANTRIAN (Ada Asset & Employee, tapi Belum Ada Engineer)
+### =================================================================
+
+# Tiket 6: Monitor PC HP Mati Total (Status: Open)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assetId": 57,
+  "employeeId": 33,
+  "status": "open",
+  "problem": "Indikator lampu monitor PC menyala kuning, tapi layar tetap hitam pekat tidak menampilkan display.",
+  "fullNumberTemplate": "TCK/202606/0006"
+}
+
+###
+
+# Tiket 7: Port USB Laptop Budi Rusak (Status: Open)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assetId": 56,
+  "employeeId": 35,
+  "status": "open",
+  "problem": "Dua port USB sebelah kiri tidak bisa membaca flashdisk maupun mouse.",
+  "fullNumberTemplate": "TCK/202606/0007"
+}
+
+###
+
+# Tiket 8: BitLocker Terkunci pada Laptop Dewi (Status: Open)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assetId": 59,
+  "employeeId": 36,
+  "status": "open",
+  "problem": "Setelah restart, laptop masuk ke layar biru BitLocker Recovery dan meminta recovery key.",
+  "fullNumberTemplate": "TCK/202606/0008"
+}
+
+
+### =================================================================
+### KONDISI 3: PERANGKAT BACKUP/GUDANG (Ada Asset, Tidak Ada Employee)
+### =================================================================
+
+# Tiket 9: Maintenance Rutin PC Workstation Cadangan (Closed Onsite oleh Engineer 8)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assetId": 58,
+  "engineerId": 8,
+  "status": "closed onsite",
+  "problem": "Pembersihan debu fisik internal casing dan repasting thermal paste PC Tower cadangan di IT Room.",
+  "solution": "Casing dibersihkan dengan kompresor gas, thermal paste diganti dengan Arctic MX-4.",
+  "solvedAt": "2026-06-14T16:00:00.000Z",
+  "remarks": "Kondisi unit backup kini 100% siap digunakan sewaktu-waktu.",
+  "fullNumberTemplate": "TCK/202606/0009"
+}
+
+###
+
+# Tiket 10: Upgrade SSD Unit Backup Lenovo (In Progress oleh Engineer 6)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assetId": 56,
+  "engineerId": 6,
+  "status": "in progress",
+  "problem": "Upgrade storage unit backup dari HDD tua ke SSD SATA agar layak pakai untuk replacement user.",
+  "remarks": "Proses kloning OS sedang berjalan.",
+  "fullNumberTemplate": "TCK/202606/0010"
+}
+
+
+### =================================================================
+### KONDISI 4: NON-ASSET (Ada Employee, Tidak Ada Asset - Akun/Akses/Email)
+### =================================================================
+
+# Tiket 11: Reset Password Akun ERP Bukit Asam - Siti (Closed Remote oleh Engineer 6)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "employeeId": 34,
+  "engineerId": 6,
+  "status": "closed remote",
+  "problem": "Akun ERP terkunci karena salah memasukkan password sebanyak 3 kali berturut-turut.",
+  "solution": "Melakukan unblock akun dan me-reset default password melalui Active Directory / Console ERP.",
+  "solvedAt": "2026-06-22T09:15:00.000Z",
+  "remarks": "Password sementara sudah dikirimkan via WhatsApp resmi internal.",
+  "fullNumberTemplate": "TCK/202606/0011"
+}
+
+###
+
+# Tiket 12: Permintaan Akses Folder Shared - Rizky (In Progress oleh Engineer 8)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "employeeId": 37,
+  "engineerId": 8,
+  "status": "in progress",
+  "problem": "Meminta hak akses (Read & Write) ke shared folder jaringan: \\\\nas-pusat\\divisi-finance.",
+  "remarks": "Menunggu dokumen approval form ditandatangani oleh Manajer Finance terkait.",
+  "fullNumberTemplate": "TCK/202606/0012"
+}
+
+###
+
+# Tiket 13: Kuota Email Outlook Penuh - Budi (Status: Open)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "employeeId": 35,
+  "status": "open",
+  "problem": "Gagal mengirim dan menerima email baru. Muncul notifikasi 'Your mailbox is full'. Meminta penambahan kuota archiver.",
+  "fullNumberTemplate": "TCK/202606/0013"
+}
+
+###
+
+# Tiket 14: Pembuatan Akun Email Baru Baru - Karyawan Baru via PIC Siti (Status: Open)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "employeeId": 34,
+  "status": "open",
+  "problem": "Request pembuatan akun email corporate (@bukitasam.co.id) untuk staf magang baru di divisinya.",
+  "fullNumberTemplate": "TCK/202606/0014"
+}
+
+###
+
+# Tiket 15: Masalah Koneksi VPN Perusahaan - Jonathan (Pending oleh Engineer 7)
+POST http://localhost:3000/tickets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "employeeId": 32,
+  "engineerId": 7,
+  "status": "pending",
+  "problem": "Gagal terhubung ke FortiClient VPN saat bekerja dari rumah (WFH). Selalu stuck di status 'Credential Authorization'.",
+  "remarks": "Sedang dikoordinasikan dengan tim Network Security pusat karena ada pemeliharaan server firewall.",
+  "fullNumberTemplate": "TCK/202606/0015"
+}

@@ -15,6 +15,11 @@ export class Project {
   name: string;
 
   @Column({
+    name: 'vendor_id',
+  })
+  vendorId: number;
+
+  @Column({
     nullable: true,
   })
   description?: string;
@@ -32,4 +37,3 @@ export class Project {
   @OneToMany(() => Asset, (asset) => asset.project)
   assets: Asset[];
 }
-

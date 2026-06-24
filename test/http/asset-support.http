@@ -1,0 +1,86 @@
+### =================================================================
+### SUPPORT ASSET FOR ASSET ID: 56 (ThinkPad L14)
+### =================================================================
+
+POST http://localhost:3000/asset-supports
+Content-Type: application/json
+
+{
+  "serialNumber": "MS-LEN-56A",
+  "assetId": 56,
+  "type": "mouse"
+}
+
+###
+
+POST http://localhost:3000/asset-supports
+Content-Type: application/json
+
+{
+  "serialNumber": "CHG-LEN-56B",
+  "assetId": 56,
+  "type": "charger"
+}
+
+### =================================================================
+### SUPPORT ASSET FOR ASSET ID: 57 (ProDesk 400 PC)
+### =================================================================
+
+POST http://localhost:3000/asset-supports
+Content-Type: application/json
+
+{
+  "serialNumber": "LCD-HP-57A",
+  "assetId": 57,
+  "type": "lcd"
+}
+
+###
+
+POST http://localhost:3000/asset-supports
+Content-Type: application/json
+
+{
+  "serialNumber": "KB-HP-57B",
+  "assetId": 57,
+  "type": "keyboard"
+}
+
+### =================================================================
+### SUPPORT ASSET FOR ASSET ID: 58 (Precision 3660 WS)
+### =================================================================
+
+POST http://localhost:3000/asset-supports
+Content-Type: application/json
+
+{
+  "serialNumber": "LCD-DELL-58A",
+  "assetId": 58,
+  "type": "lcd"
+}
+
+### =================================================================
+### SUPPORT ASSET FOR ASSET ID: 59 (ProArt Studiobook MWS)
+### =================================================================
+
+POST http://localhost:3000/asset-supports
+Content-Type: application/json
+
+{
+  "serialNumber": "CHG-ASUS-59A",
+  "assetId": 59,
+  "type": "charger"
+}
+
+### =================================================================
+### SUPPORT ASSET FOR ASSET ID: 60 (EliteBook 840)
+### =================================================================
+
+POST http://localhost:3000/asset-supports
+Content-Type: application/json
+
+{
+  "serialNumber": "MS-LOGI-60A",
+  "assetId": 60,
+  "type": "mouse"
+}

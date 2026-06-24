@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateAssetDto } from './dto/create-asset.dto';
@@ -44,7 +45,9 @@ export class AssetsService {
         ),
       );
     }
-    return await this.assetRepository.save(dto);
+    const asset = this.assetRepository.create(dto);
+    Logger.log(asset);
+    return await this.assetRepository.save(asset);
   }
 
   async findAll() {

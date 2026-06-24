@@ -1,0 +1,42 @@
+POST http://localhost:3000/vendors
+Content-Type: application/json
+
+{
+  "name": "PT Mitra Integrasi Informatika"
+}
+
+###
+
+POST http://localhost:3000/vendors
+Content-Type: application/json
+
+{
+  "name": "PT Telekomunikasi Indonesia Tbk"
+}
+
+###
+
+POST http://localhost:3000/vendors
+Content-Type: application/json
+
+{
+  "name": "PT Mastersystem Infotama"
+}
+
+###
+
+POST http://localhost:3000/vendors
+Content-Type: application/json
+
+{
+  "name": "PT Anabatic Technologies Tbk"
+}
+
+###
+
+POST http://localhost:3000/vendors
+Content-Type: application/json
+
+{
+  "name": "PT Metrodata Electronics Tbk"
+}

@@ -55,11 +55,6 @@ export class Asset {
   workLocationId: number;
 
   @Column({
-    name: 'project_name',
-  })
-  projectName?: string;
-
-  @Column({
     name: 'warranty_date',
   })
   warrantyDate?: Date;
@@ -70,10 +65,10 @@ export class Asset {
   purchaseDate?: Date;
 
   @Column({
-    name: 'project_id',
+    name: 'project_name',
     select: false,
   })
-  projectId: number;
+  projectName: string;
 
   @Column({
     name: 'storage_type',
@@ -82,6 +77,7 @@ export class Asset {
 
   @Column({
     name: 'storage_capacity_byte',
+    type: 'bigint',
   })
   storageCapacityByte?: number;
 
@@ -92,6 +88,7 @@ export class Asset {
 
   @Column({
     name: 'memory_capacity_byte',
+    type: 'bigint',
   })
   memoryCapacityByte?: number;
 
@@ -115,7 +112,7 @@ export class Asset {
   workLocation: WorkLocation;
 
   @ManyToOne(() => Project, (project) => project.assets)
-  @JoinColumn({ name: 'project_id' })
+  @JoinColumn({ name: 'project_name' })
   project: Project;
 
   @OneToMany(() => AssetAssignment, (assetAssignment) => assetAssignment.asset)

@@ -1,0 +1,167 @@
+### =================================================================
+### VENDOR ID: 1 (PT. Mitra Integrasi Informatika)
+### =================================================================
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 1,
+  "type": "email",
+  "contact": "cs@mii.co.id"
+}
+
+###
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 1,
+  "type": "phone",
+  "contact": "02129345777"
+}
+
+### =================================================================
+### VENDOR ID: 3 (PT. Synnovax)
+### =================================================================
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 3,
+  "type": "email",
+  "contact": "support@synnovax.com"
+}
+
+###
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 3,
+  "type": "phone",
+  "contact": "02150880123"
+}
+
+### =================================================================
+### VENDOR ID: 4 (PT Mitra Integrasi Informatika - Duplicate / Branch)
+### =================================================================
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 4,
+  "type": "email",
+  "contact": "helpdesk.jakarta@mii.co.id"
+}
+
+###
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 4,
+  "type": "phone",
+  "contact": "02129345778"
+}
+
+### =================================================================
+### VENDOR ID: 5 (PT Telekomunikasi Indonesia Tbk)
+### =================================================================
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 5,
+  "type": "email",
+  "contact": "enterprise.support@telkom.co.id"
+}
+
+###
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 5,
+  "type": "phone",
+  "contact": "1500250"
+}
+
+### =================================================================
+### VENDOR ID: 6 (PT Mastersystem Infotama)
+### =================================================================
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 6,
+  "type": "email",
+  "contact": "service.desk@mastersystem.co.id"
+}
+
+###
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 6,
+  "type": "phone",
+  "contact": "02157943555"
+}
+
+### =================================================================
+### VENDOR ID: 7 (PT Anabatic Technologies Tbk)
+### =================================================================
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 7,
+  "type": "email",
+  "contact": "support@anabatic.com"
+}
+
+###
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 7,
+  "type": "phone",
+  "contact": "02153663777"
+}
+
+### =================================================================
+### VENDOR ID: 8 (PT Metrodata Electronics Tbk)
+### =================================================================
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 8,
+  "type": "email",
+  "contact": "customer.care@metrodata.co.id"
+}
+
+###
+
+POST http://localhost:3000/support-contacts
+Content-Type: application/json
+
+{
+  "vendorId": 8,
+  "type": "phone",
+  "contact": "02129345888"
+}

@@ -96,7 +96,7 @@ export class UsersService {
   async findForLogin(username: string): Promise<UserForLogin> {
     const user = await this.userRepository.findOne({
       where: [{ username }],
-      select: ['id', 'username', 'email', 'password', 'role'],
+      select: ['id', 'username', 'email', 'password', 'role', 'fullName'],
     });
     if (!user) {
       return null;

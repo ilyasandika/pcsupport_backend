@@ -8,4 +8,7 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   description: string;
+
+  @IsNotEmpty()
+  vendorId: number;
 }

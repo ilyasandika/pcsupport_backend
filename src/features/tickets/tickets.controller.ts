@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Logger,
+  Query,
 } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -18,6 +19,7 @@ import * as jwtPayloadInterface from '../../common/interfaces/jwt-payload.interf
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
+import { GetTicketTrendDto } from './dto/trend-ticket.dto';
 
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,7 +36,7 @@ export class TicketsController {
   }
 
   @Patch('claim/:id')
-  @Roles(Role.Engineer)
+  @Roles(Role.Engineer, Role.Admin, Role.Helpdesk)
   async claim(
     @Param('id') id: string,
     @GetUser() user: jwtPayloadInterface.JwtPayload,
@@ -45,6 +47,16 @@ export class TicketsController {
   @Get()
   findAll() {
     return this.ticketsService.findAll();
+  }
+
+  @Get('/count')
+  getCountByStatus() {
+    return this.ticketsService.getCountByStatus();
+  }
+
+  @Get('/trend/time')
+  getTrendByTime(@Query() query: GetTicketTrendDto) {
+    return this.ticketsService.getTicketTrend(query.range);
   }
 
   @Get(':id')

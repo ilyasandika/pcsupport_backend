@@ -1,18 +1,19 @@
 import {
-  BadRequestException, HttpException,
+  BadRequestException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Ticket } from './entities/ticket.entity';
-import { EntityManager, Repository } from 'typeorm';
+import { Between, EntityManager, Repository } from 'typeorm';
 import Mustache from 'mustache';
 import { TicketStatus } from '../../common/enums/ticket-status.enum';
 import { AssetAssignmentsService } from '../asset_assignments/asset_assignments.service';
+import { TrendRange } from '../../common/enums/common.enum';
 
 @Injectable()
 export class TicketsService {
@@ -135,6 +136,27 @@ export class TicketsService {
     }
   }
 
+  private async getFullNumber(
+    manager: EntityManager,
+    template?: string,
+  ): Promise<string> {
+    const latestTicket = await manager.findOne(Ticket, {
+      where: {},
+      order: { sequenceNumber: 'DESC' },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    const nextNumber: number = latestTicket
+      ? latestTicket.sequenceNumber + 1
+      : 1;
+
+    return template
+      ? Mustache.render(template, {
+          sequenceNumber: nextNumber,
+        })
+      : `${new Date().getFullYear() % 100}-${nextNumber}`;
+  }
+
   async findAll() {
     return await this.ticketRepository.find({
       relations: {
@@ -170,28 +192,99 @@ export class TicketsService {
     return await this.ticketRepository.save(ticket);
   }
 
-  async remove(id: number) {
-    return `This action removes a #${id} ticket`;
-  }
+  async getTicketTrend(range: TrendRange = TrendRange.MONTH) {
+    const now = new Date();
+    const startDate = new Date();
 
-  private async getFullNumber(
-    manager: EntityManager,
-    template?: string,
-  ): Promise<string> {
-    const latestTicket = await manager.findOne(Ticket, {
-      where: {},
-      order: { sequenceNumber: 'DESC' },
-      lock: { mode: 'pessimistic_write' },
+    //startDate
+    if (range === TrendRange.WEEK) {
+      startDate.setDate(now.getDate() - 7);
+    } else if (range === TrendRange.YEAR) {
+      startDate.setFullYear(now.getFullYear() - 1);
+    } else {
+      startDate.setDate(now.getDate() - 30);
+    }
+
+    const tickets = await this.ticketRepository.find({
+      where: {
+        createdAt: Between(startDate, now),
+      },
+      select: ['id', 'createdAt'],
+      order: {
+        createdAt: 'ASC',
+      },
     });
 
-    const nextNumber: number = latestTicket
-      ? latestTicket.sequenceNumber + 1
-      : 1;
+    return this.groupTicketsByRange(tickets, range);
+  }
 
-    return template
-      ? Mustache.render(template, {
-          sequenceNumber: nextNumber,
-        })
-      : `${new Date().getFullYear() % 100}-${nextNumber}`;
+  private groupTicketsByRange(tickets: Ticket[], range: TrendRange) {
+    const trendMap = new Map<string, number>();
+
+    tickets.forEach((ticket) => {
+      const date = new Date(ticket.createdAt);
+      let label = '';
+
+      if (range === TrendRange.YEAR) {
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        label = `${date.getFullYear()}-${month}`;
+      } else {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        label = `${date.getFullYear()}-${month}-${day}`;
+      }
+
+      const currentCount = trendMap.get(label) || 0;
+      trendMap.set(label, currentCount + 1);
+    });
+
+    // Convert Map kembali menjadi Array of Objects standar untuk Frontend
+    return Array.from(trendMap.entries()).map(([label, count]) => ({
+      label,
+      count,
+    }));
+  }
+
+  async getCountByStatus() {
+    const [
+      total,
+      pending,
+      inProgress,
+      closedRemote,
+      closedVisit,
+      closedOnsite,
+      resolved,
+    ] = await Promise.all([
+      this.ticketRepository.count(),
+      this.ticketRepository.count({ where: { status: TicketStatus.Open } }),
+      this.ticketRepository.count({ where: { status: TicketStatus.Pending } }),
+      this.ticketRepository.count({
+        where: { status: TicketStatus.InProgress },
+      }),
+      this.ticketRepository.count({
+        where: { status: TicketStatus.ClosedRemote },
+      }),
+      this.ticketRepository.count({
+        where: { status: TicketStatus.ClosedVisit },
+      }),
+      this.ticketRepository.count({
+        where: { status: TicketStatus.ClosedOnsite },
+      }),
+      this.ticketRepository.count({ where: { status: TicketStatus.Resolved } }),
+    ]);
+
+    return {
+      total,
+      pending,
+      inProgress,
+      closedRemote,
+      closedVisit,
+      closedOnsite,
+      resolved,
+    };
+  }
+
+  async remove(id: number) {
+    return `This action removes a #${id} ticket`;
   }
 }

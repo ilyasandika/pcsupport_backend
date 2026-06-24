@@ -1,0 +1,49 @@
+POST http://localhost:3000/work-locations
+Content-Type: application/json
+
+{
+  "name": "Tanjung Enim",
+  "description": "Kantor Pusat & Unit Pertambangan Tanjung Enim",
+  "longitude": "103.794600",
+  "latitude": "-3.750400",
+  "address": "Jl. Lingga, Tj. Enim, Kecamatan Lawang Kidul, Kabupaten Muara Enim, Sumatera Selatan"
+}
+
+###
+
+POST http://localhost:3000/work-locations
+Content-Type: application/json
+
+{
+  "name": "Tarahan",
+  "description": "Unit Pelabuhan Tarahan",
+  "longitude": "105.340400",
+  "latitude": "-5.513300",
+  "address": "Srengsem, Kecamatan Panjang, Kota Bandar Lampung, Lampung"
+}
+
+###
+
+POST http://localhost:3000/work-locations
+Content-Type: application/json
+
+{
+  "name": "Jakarta",
+  "description": "Kantor Perwakilan Jakarta",
+  "longitude": "106.845599",
+  "latitude": "-6.208763",
+  "address": "Menara MTH, Jl. M.T. Haryono, Jakarta Selatan, DKI Jakarta"
+}
+
+###
+
+POST http://localhost:3000/work-locations
+Content-Type: application/json
+
+{
+  "name": "Kertapati",
+  "description": "Unit Dermaga Kertapati",
+  "longitude": "104.755400",
+  "latitude": "-3.003900",
+  "address": "Kertapati, Kecamatan Kertapati, Kota Palembang, Sumatera Selatan"
+}

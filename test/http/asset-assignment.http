@@ -1,0 +1,179 @@
+### =================================================================
+### 1. JONATHAN (ID: 32) - Riwayat Ganti Perangkat
+### =================================================================
+
+# Seri 1: Pakai Lenovo (Asset 56) -> Sudah Dikembalikan
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 56,
+  "picEmployeeId": 32,
+  "assignedAt": "2025-01-10T08:00:00.000Z",
+  "returnedAt": "2025-06-15T17:00:00.000Z",
+  "remarks": "Perangkat pertama saat masuk kerja. Dikembalikan untuk penyegaran.",
+  "isLegacyData": false
+}
+
+###
+
+# Seri 2: Ganti ke HP EliteBook (Asset 60) -> Aktif Sekarang (Digunakan Sendiri)
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 60,
+  "picEmployeeId": 32,
+  "assignedAt": "2025-06-16T09:00:00.000Z",
+  "remarks": "Laptop upgrade, digunakan untuk operasional harian.",
+  "isLegacyData": false
+}
+
+
+### =================================================================
+### 2. REZA (ID: 33) - Riwayat PC Desktop Divisi
+### =================================================================
+
+# Seri 3: Pakai PC HP (Asset 57) -> Sudah Dikembalikan (Divisi Pindah)
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 57,
+  "picEmployeeId": 33,
+  "assignedAt": "2025-02-01T08:30:00.000Z",
+  "returnedAt": "2025-12-20T16:00:00.000Z",
+  "remarks": "PC Desktop lama di ruang staf utama.",
+  "isLegacyData": false
+}
+
+###
+
+# Seri 4: Ganti ke Dell Precision Tower (Asset 58) -> Aktif Sekarang (Digunakan Sendiri)
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 58,
+  "picEmployeeId": 33,
+  "assignedAt": "2025-12-21T09:00:00.000Z",
+  "remarks": "Upgrade ke PC Workstation untuk pengolahan data berat.",
+  "isLegacyData": false
+}
+
+
+### =================================================================
+### 3. SITI (ID: 34) - PIC untuk User Non-Employee (Tamu/Mitra)
+### =================================================================
+
+# Seri 5: Jadi PIC untuk Lenovo (Asset 56) -> Sudah Dikembalikan
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 56,
+  "picEmployeeId": 34,
+  "userNonEmployeeName": "Rian Vendor Solusi",
+  "assignedAt": "2025-07-01T10:00:00.000Z",
+  "returnedAt": "2025-11-30T17:00:00.000Z",
+  "remarks": "Siti menjadi PIC pinjaman laptop untuk tim vendor.",
+  "isLegacyData": false
+}
+
+###
+
+# Seri 6: Jadi PIC untuk PC HP (Asset 57) -> Aktif Sekarang (User Tamu)
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 57,
+  "picEmployeeId": 34,
+  "userNonEmployeeName": "Andi Auditor BPK",
+  "assignedAt": "2026-01-05T08:30:00.000Z",
+  "remarks": "Dipinjamkan ke ruang rapat komite audit.",
+  "isLegacyData": false
+}
+
+
+### =================================================================
+### 4. BUDI (ID: 35) - Rotasi Perangkat Lapangan
+### =================================================================
+
+# Seri 7: Sempat memegang HP EliteBook (Asset 60) -> Sudah Dikembalikan awal 2025
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 60,
+  "picEmployeeId": 35,
+  "assignedAt": "2025-01-02T08:00:00.000Z",
+  "returnedAt": "2025-06-10T16:00:00.000Z",
+  "remarks": "Perangkat dikembalikan karena Budi pindah tugas lapangan.",
+  "isLegacyData": false
+}
+
+###
+
+# Seri 8: Mengambil Lenovo (Asset 56) -> Aktif Sekarang (Digunakan Sendiri)
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 56,
+  "picEmployeeId": 35,
+  "assignedAt": "2025-12-05T09:00:00.000Z",
+  "remarks": "Laptop operasional lapangan ex-user lain setelah di-reimage.",
+  "isLegacyData": false
+}
+
+
+### =================================================================
+### 5. DEWI (ID: 36) - Spesialis Heavy Compute
+### =================================================================
+
+# Seri 9: Sempat memakai Dell Precision (Asset 58) -> Sudah Dikembalikan
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 58,
+  "picEmployeeId": 36,
+  "assignedAt": "2025-03-15T08:00:00.000Z",
+  "returnedAt": "2025-12-15T17:00:00.000Z",
+  "remarks": "PC Workstation lama divisi engineering.",
+  "isLegacyData": false
+}
+
+###
+
+# Seri 10: Ganti ke Asus ProArt MWS (Asset 59) -> Aktif Sekarang (Digunakan Sendiri)
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 59,
+  "picEmployeeId": 36,
+  "assignedAt": "2025-12-16T10:00:00.000Z",
+  "remarks": "Pindah ke Mobile Workstation agar fleksibel kerja remote.",
+  "isLegacyData": false
+}
+
+
+### =================================================================
+### 6. RIZKY (ID: 37) - PIC Tambahan
+### =================================================================
+
+# Seri 11: Sempat jadi PIC Asus ProArt (Asset 59) sebelum Dewi -> Sudah Dikembalikan
+POST http://localhost:3000/asset-assignments
+Content-Type: application/json
+
+{
+  "assetId": 59,
+  "picEmployeeId": 37,
+  "userNonEmployeeName": "Prof. Supriadi (Konsultan)",
+  "assignedAt": "2025-05-01T08:00:00.000Z",
+  "returnedAt": "2025-11-30T16:00:00.000Z",
+  "remarks": "Rizky mendampingi pendaftaran aset konsultan eksternal.",
+  "isLegacyData": false
+}
