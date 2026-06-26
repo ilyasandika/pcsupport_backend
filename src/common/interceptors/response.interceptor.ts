@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { map, Observable } from 'rxjs';
 import { Response } from 'express';
+import { instanceToPlain } from 'class-transformer';
 
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
@@ -14,13 +15,17 @@ export class ResponseInterceptor implements NestInterceptor {
     const response = httpContext.getResponse<Response>();
 
     return next.handle().pipe(
-      map((data) => ({
-        success: true,
-        statusCode: response.statusCode,
-        message: 'Successfully',
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        data: data,
-      })),
+      map((data) => {
+        const serializedData = instanceToPlain(data, {
+          excludeExtraneousValues: true,
+        });
+        return {
+          success: true,
+          statusCode: response.statusCode,
+          message: 'Successfully',
+          data: serializedData,
+        };
+      }),
     );
   }
 }

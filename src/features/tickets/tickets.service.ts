@@ -3,6 +3,7 @@ import {
   HttpException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -14,6 +15,8 @@ import Mustache from 'mustache';
 import { TicketStatus } from '../../common/enums/ticket-status.enum';
 import { AssetAssignmentsService } from '../asset_assignments/asset_assignments.service';
 import { TrendRange } from '../../common/enums/common.enum';
+import { plainToInstance } from 'class-transformer';
+import { TicketResponseDto } from './dto/ticket-response.dto';
 
 @Injectable()
 export class TicketsService {
@@ -157,17 +160,55 @@ export class TicketsService {
       : `${new Date().getFullYear() % 100}-${nextNumber}`;
   }
 
-  async findAll() {
-    return await this.ticketRepository.find({
+  async findAll(): Promise<TicketResponseDto[]> {
+    const tickets = await this.ticketRepository.find({
       relations: {
         asset: {
-          assetAssignments: true,
+          assetAssignments: {
+            employee: true,
+          },
         },
         createdBy: true,
         engineer: true,
         employee: true,
+        location: true,
+        slaPolicy: true,
+      },
+      order: {
+        createdAt: 'DESC',
+        asset: {
+          assetAssignments: {
+            assignedAt: 'DESC',
+          },
+        },
       },
     });
+
+    const formattedTicket = tickets.map((ticket) => {
+      if (
+        ticket.asset &&
+        ticket.asset.assetAssignments &&
+        ticket.asset.assetAssignments.length > 0
+      ) {
+        const lastAssigment = ticket.asset.assetAssignments[0];
+        const user = {
+          name: ticket.employee?.name,
+          nik: ticket.employee?.nik,
+          userNonEmployeeName: lastAssigment.userNonEmployeeName,
+        };
+        return {
+          ...ticket,
+          asset: {
+            ...ticket.asset,
+            assetAssignment: user,
+          },
+        };
+      }
+      return {
+        ...ticket,
+      };
+    });
+    return plainToInstance(TicketResponseDto, formattedTicket);
   }
 
   async findOne(id: number) {
@@ -248,6 +289,7 @@ export class TicketsService {
   async getCountByStatus() {
     const [
       total,
+      open,
       pending,
       inProgress,
       closedRemote,
@@ -272,9 +314,11 @@ export class TicketsService {
       }),
       this.ticketRepository.count({ where: { status: TicketStatus.Resolved } }),
     ]);
+    Logger.log(inProgress);
 
     return {
       total,
+      open,
       pending,
       inProgress,
       closedRemote,
@@ -284,7 +328,7 @@ export class TicketsService {
     };
   }
 
-  async remove(id: number) {
+  remove(id: number) {
     return `This action removes a #${id} ticket`;
   }
 }

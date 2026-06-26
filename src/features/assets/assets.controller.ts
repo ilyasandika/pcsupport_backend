@@ -30,6 +30,11 @@ export class AssetsController {
     return this.assetsService.findOne(+id);
   }
 
+  @Get('count/category')
+  getCountByCategory() {
+    return this.assetsService.getCountByCategory();
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateAssetDto) {
     return this.assetsService.update(+id, dto);

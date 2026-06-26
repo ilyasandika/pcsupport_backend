@@ -20,6 +20,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { GetTicketTrendDto } from './dto/trend-ticket.dto';
+import { TicketResponseDto } from './dto/ticket-response.dto';
 
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -45,11 +46,11 @@ export class TicketsController {
   }
 
   @Get()
-  findAll() {
-    return this.ticketsService.findAll();
+  async findAll(): Promise<TicketResponseDto[]> {
+    return await this.ticketsService.findAll();
   }
 
-  @Get('/count')
+  @Get('/count/status')
   getCountByStatus() {
     return this.ticketsService.getCountByStatus();
   }

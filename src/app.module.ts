@@ -15,6 +15,7 @@ import { AssetAssignmentsModule } from './features/asset_assignments/asset_assig
 import { TicketsModule } from './features/tickets/tickets.module';
 import { AssetSupportsModule } from './features/asset_supports/asset_supports.module';
 import { ProjectsModule } from './features/projects/projects.module';
+import { SlaPoliciesModule } from './features/sla-policies/sla-policies.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ProjectsModule } from './features/projects/projects.module';
     TicketsModule,
     AssetSupportsModule,
     ProjectsModule,
+    SlaPoliciesModule,
   ],
   controllers: [],
   providers: [],

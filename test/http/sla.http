@@ -1,0 +1,81 @@
+### Variabel Global
+@baseUrl = http://localhost:3000
+@contentType = application/json
+
+### 1. Create SLA Policy - Level 1: Critical (Urgent)
+# Response: 15 Menit (900s), Resolution: 2 Jam (7200s)
+# Berjalan 24/7 (isBusinessHourOnly: false)
+POST {{baseUrl}}/sla-policies
+Content-Type: {{contentType}}
+
+{
+  "name": "Level 1 - Critical",
+  "description": "SLA untuk isu kritikal yang menyebabkan sistem mati total (down).",
+  "responseTimeSeconds": 900,
+  "resolutionTimeSeconds": 7200,
+  "isBusinessHourOnly": false
+}
+
+###
+
+### 2. Create SLA Policy - Level 2: High
+# Response: 1 Jam (3600s), Resolution: 4 Jam (14400s)
+# Berjalan 24/7 (isBusinessHourOnly: false)
+POST {{baseUrl}}/sla-policies
+Content-Type: {{contentType}}
+
+{
+  "name": "Level 2 - High",
+  "description": "SLA untuk gangguan fungsi utama aplikasi namun sistem masih bisa diakses.",
+  "responseTimeSeconds": 3600,
+  "resolutionTimeSeconds": 14400,
+  "isBusinessHourOnly": false
+}
+
+###
+
+### 3. Create SLA Policy - Level 3: Medium
+# Response: 4 Jam (14400s), Resolution: 8 Jam / 1 Hari Kerja (28800s)
+# Hanya berlaku di jam kerja (isBusinessHourOnly: true)
+POST {{baseUrl}}/sla-policies
+Content-Type: {{contentType}}
+
+{
+  "name": "Level 3 - Medium",
+  "description": "SLA untuk masalah performa atau fitur minor yang tidak menghentikan operasional.",
+  "responseTimeSeconds": 14400,
+  "resolutionTimeSeconds": 28800,
+  "isBusinessHourOnly": true
+}
+
+###
+
+### 4. Create SLA Policy - Level 4: Low
+# Response: 8 Jam (28800s), Resolution: 24 Jam / 3 Hari Kerja (86400s)
+# Hanya berlaku di jam kerja (isBusinessHourOnly: true)
+POST {{baseUrl}}/sla-policies
+Content-Type: {{contentType}}
+
+{
+  "name": "Level 4 - Low",
+  "description": "SLA untuk request bantuan, pertanyaan umum, atau kosmetik minor pada UI.",
+  "responseTimeSeconds": 28800,
+  "resolutionTimeSeconds": 86400,
+  "isBusinessHourOnly": true
+}
+
+###
+
+### 5. Create SLA Policy - Level 5: Planning / RFC
+# Response: 24 Jam (86400s), Resolution: 120 Jam / 5 Hari Kerja (432000s)
+# Hanya berlaku di jam kerja (isBusinessHourOnly: true)
+POST {{baseUrl}}/sla-policies
+Content-Type: {{contentType}}
+
+{
+  "name": "Level 5 - Planning & RFC",
+  "description": "SLA untuk Request for Change (RFC), saran fitur baru, atau maintenance terjadwal.",
+  "responseTimeSeconds": 86400,
+  "resolutionTimeSeconds": 432000,
+  "isBusinessHourOnly": true
+}

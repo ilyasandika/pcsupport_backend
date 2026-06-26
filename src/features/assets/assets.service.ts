@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Asset } from './entities/asset.entity';
 import { Repository } from 'typeorm';
 import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
+import { AssetCategory } from '../../common/enums/asset-type.enum';
 
 @Injectable()
 export class AssetsService {
@@ -73,6 +74,30 @@ export class AssetsService {
     } catch {
       throw new NotFoundException('asset not found');
     }
+  }
+
+  async getCountByCategory() {
+    const [nb, pc, ws, mws] = await Promise.all([
+      this.assetRepository.count({
+        where: { category: AssetCategory.Notebook },
+      }),
+      this.assetRepository.count({
+        where: { category: AssetCategory.PersonalComputer },
+      }),
+      this.assetRepository.count({
+        where: { category: AssetCategory.MobileWorkStation },
+      }),
+      this.assetRepository.count({
+        where: { category: AssetCategory.MobileWorkStation },
+      }),
+    ]);
+
+    return {
+      nb,
+      pc,
+      ws,
+      mws,
+    };
   }
 
   async update(id: number, dto: UpdateAssetDto) {

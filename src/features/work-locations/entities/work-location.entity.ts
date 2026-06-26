@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Asset } from '../../assets/entities/asset.entity';
+import { Ticket } from '../../tickets/entities/ticket.entity';
 
 @Entity('work_locations')
 export class WorkLocation {
@@ -47,4 +48,7 @@ export class WorkLocation {
 
   @OneToMany(() => Asset, (asset) => asset.workLocation)
   assets: Asset[];
+
+  @OneToMany(() => Ticket, (ticket) => ticket.location)
+  tickets: Ticket[];
 }

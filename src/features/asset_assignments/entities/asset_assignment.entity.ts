@@ -28,6 +28,10 @@ export class AssetAssignment {
   })
   picEmployeeId: number;
 
+  @ManyToOne(() => Employee, (employee) => employee.assetAssignments)
+  @JoinColumn({ name: 'pic_employee_id' })
+  employee: Employee;
+
   @Column({
     name: 'user_non_employee_name',
     nullable: true,
@@ -67,10 +71,6 @@ export class AssetAssignment {
     default: false,
   })
   isLegacyData: boolean;
-
-  @ManyToOne(() => Employee, (employee) => employee.assetAssignments)
-  @JoinColumn({ name: 'pic_employee_id' })
-  employee: Employee;
 
   @ManyToOne(() => Asset, (asset) => asset.assetAssignments)
   @JoinColumn({ name: 'asset_id' })

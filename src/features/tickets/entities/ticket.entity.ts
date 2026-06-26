@@ -1,7 +1,8 @@
 import {
   Column,
   CreateDateColumn,
-  Entity, JoinColumn,
+  Entity,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -10,6 +11,8 @@ import { TicketStatus } from '../../../common/enums/ticket-status.enum';
 import { Asset } from '../../assets/entities/asset.entity';
 import { Employee } from '../../employees/entities/employee.entity';
 import { User } from '../../users/entities/user.entity';
+import { SlaPolicy } from '../../sla-policies/entities/sla-policy.entity';
+import { WorkLocation } from '../../work-locations/entities/work-location.entity';
 
 @Entity({
   name: 'tickets',
@@ -74,7 +77,28 @@ export class Ticket {
   problem: string;
 
   @Column({
+    name: 'sla_policy_id',
+  })
+  slaPolicyId: number;
+
+  @ManyToOne(() => SlaPolicy, (sla) => sla.tickets)
+  @JoinColumn({ name: 'sla_policy_id' })
+  slaPolicy: SlaPolicy;
+
+  @Column({
+    name: 'location_id',
+    nullable: true,
+  })
+  locationId: number;
+
+  @ManyToOne(() => WorkLocation, (location) => location.tickets)
+  @JoinColumn({ name: 'location_id' })
+  location: SlaPolicy;
+
+  @Column({
     default: TicketStatus.Open,
+    type: 'enum',
+    enum: TicketStatus,
   })
   status: TicketStatus;
 
