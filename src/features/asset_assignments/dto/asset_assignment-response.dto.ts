@@ -1,15 +1,10 @@
 import { Expose, Type } from 'class-transformer';
-class Employee {
-  @Expose()
-  name: number;
-  @Expose()
-  nik: number;
-}
+import { EmployeeResponseDto } from '../../employees/dto/employee-response.dto';
 
-export class AssetAssignmentResponseDto {
+export class DetailAssetAssignmentResponseDto {
   @Expose()
   id: number;
-  
+
   @Expose()
   assetId: number;
 
@@ -17,8 +12,8 @@ export class AssetAssignmentResponseDto {
   picEmployeeId: number;
 
   @Expose()
-  @Type(() => Employee)
-  employee: Employee;
+  @Type(() => EmployeeResponseDto)
+  employee: EmployeeResponseDto;
 
   @Expose()
   userNonEmployeeName?: string;
@@ -31,4 +26,14 @@ export class AssetAssignmentResponseDto {
 
   @Expose()
   remarks?: string;
+}
+
+export class AssetAssignmentResponseDto {
+  @Expose()
+  userNonEmployeeName?: string;
+  @Expose()
+  assignedAt: Date;
+  @Expose()
+  @Type(() => EmployeeResponseDto)
+  employee: EmployeeResponseDto;
 }

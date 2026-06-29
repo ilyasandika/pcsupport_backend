@@ -11,6 +11,12 @@ import { Asset } from './entities/asset.entity';
 import { Repository } from 'typeorm';
 import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
 import { AssetCategory } from '../../common/enums/asset-type.enum';
+import {
+  instanceToPlain,
+  plainToClass,
+  plainToInstance,
+} from 'class-transformer';
+import { DetailAssetResponseDto } from './dto/asset-response.dto';
 
 @Injectable()
 export class AssetsService {
@@ -52,13 +58,36 @@ export class AssetsService {
   }
 
   async findAll() {
-    return await this.assetRepository.find({
+    const asset = await this.assetRepository.find({
       relations: {
         workLocation: true,
-        project: true,
         supports: true,
+        category: true,
+        project: {
+          vendor: true,
+        },
+        assetAssignments: {
+          employee: true,
+        },
+      },
+      order: {
+        assetAssignments: {
+          assignedAt: 'DESC',
+        },
       },
     });
+
+    const formattedAsset = asset.map((asset) => {
+      if (asset.assetAssignments.length > 0) {
+        const lastAssignment = asset.assetAssignments[0];
+        return {
+          ...asset,
+          assetAssignment: lastAssignment,
+        };
+      }
+      return asset;
+    });
+    return plainToInstance(DetailAssetResponseDto, formattedAsset);
   }
 
   async findOne(id: number) {
@@ -67,37 +96,13 @@ export class AssetsService {
         where: { id },
         relations: {
           workLocation: true,
-          project: true,
           supports: true,
+          project: true,
         },
       });
     } catch {
       throw new NotFoundException('asset not found');
     }
-  }
-
-  async getCountByCategory() {
-    const [nb, pc, ws, mws] = await Promise.all([
-      this.assetRepository.count({
-        where: { category: AssetCategory.Notebook },
-      }),
-      this.assetRepository.count({
-        where: { category: AssetCategory.PersonalComputer },
-      }),
-      this.assetRepository.count({
-        where: { category: AssetCategory.MobileWorkStation },
-      }),
-      this.assetRepository.count({
-        where: { category: AssetCategory.MobileWorkStation },
-      }),
-    ]);
-
-    return {
-      nb,
-      pc,
-      ws,
-      mws,
-    };
   }
 
   async update(id: number, dto: UpdateAssetDto) {

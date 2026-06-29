@@ -1,9 +1,11 @@
-import { AssetCategory } from '../../../common/enums/asset-type.enum';
 import { Expose, Type } from 'class-transformer';
-import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
+import { WorkLocationResponseDto } from '../../work-locations/dto/work-location-response.dto';
 import { AssetAssignmentResponseDto } from '../../asset_assignments/dto/asset_assignment-response.dto';
+import { AssetSupportResponseDto } from '../../asset_supports/dto/asset_support-response.dto';
+import { AssetCategoryResponseDto } from '../../asset_categories/dto/asset_category-response.dto';
+import { ProjectResponseDto } from '../../projects/dto/project-response.dto';
 
-export class AssetResponseDto {
+export class DetailAssetResponseDto {
   @Expose()
   id: number;
 
@@ -17,7 +19,8 @@ export class AssetResponseDto {
   hostname: string;
 
   @Expose()
-  category: AssetCategory;
+  @Type(() => AssetCategoryResponseDto)
+  category: AssetCategoryResponseDto;
 
   @Expose()
   brand: string;
@@ -53,9 +56,36 @@ export class AssetResponseDto {
   processor?: string;
 
   @Expose()
+  @Type(() => WorkLocationResponseDto)
+  workLocation: WorkLocationResponseDto;
+
+  @Expose()
+  @Type(() => AssetSupportResponseDto)
+  supports: AssetSupportResponseDto[];
+
+  @Expose()
   @Type(() => AssetAssignmentResponseDto)
-  assetAssignments: AssetAssignmentResponseDto[];
+  assetAssignment: AssetAssignmentResponseDto;
+
+  @Expose()
+  @Type(() => ProjectResponseDto)
+  project: ProjectResponseDto;
 
   createdAt: Date;
   updatedAt: Date;
+}
+
+export class AssetResponseDto {
+  @Expose()
+  serialNumber: string;
+  @Expose()
+  assetTag: string;
+  @Expose()
+  hostname: string;
+  @Expose()
+  @Type(() => AssetCategoryResponseDto)
+  category: AssetCategoryResponseDto;
+  @Expose()
+  @Type(() => AssetAssignmentResponseDto)
+  assetAssignment: AssetAssignmentResponseDto;
 }

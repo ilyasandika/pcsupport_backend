@@ -5,17 +5,15 @@ import {
   JoinColumn,
   ManyToOne, OneToMany,
   PrimaryGeneratedColumn,
-  Unique,
   UpdateDateColumn,
 } from 'typeorm';
-import { AssetCategory } from '../../../common/enums/asset-type.enum';
+import { AssetCategory as AssetCategoryType } from '../../../common/enums/asset-type.enum';
 import { WorkLocation } from '../../work-locations/entities/work-location.entity';
-import { Vendor } from '../../vendors/entities/vendor.entity';
-import { VendorSupportContact } from '../../vendor_support_contacts/entities/vendor_support_contact.entity';
 import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
 import { Ticket } from '../../tickets/entities/ticket.entity';
 import { AssetSupport } from '../../asset_supports/entities/asset_support.entity';
 import { Project } from '../../projects/entities/project.entity';
+import { AssetCategory } from '../../asset_categories/entities/asset_category.entity';
 
 @Entity({
   name: 'assets',
@@ -40,7 +38,13 @@ export class Asset {
   hostname: string;
 
   @Column()
-  category: AssetCategory;
+  exCategory: AssetCategoryType;
+
+  @Column({
+    name: 'category_id',
+    nullable: true
+  })
+  categoryId: number;
 
   @Column()
   brand: string;
@@ -65,10 +69,11 @@ export class Asset {
   purchaseDate?: Date;
 
   @Column({
-    name: 'project_name',
+    name: 'project_id',
     select: false,
+    nullable: true,
   })
-  projectName: string;
+  projectId: number;
 
   @Column({
     name: 'storage_type',
@@ -112,7 +117,7 @@ export class Asset {
   workLocation: WorkLocation;
 
   @ManyToOne(() => Project, (project) => project.assets)
-  @JoinColumn({ name: 'project_name' })
+  @JoinColumn({ name: 'project_id' })
   project: Project;
 
   @OneToMany(() => AssetAssignment, (assetAssignment) => assetAssignment.asset)
@@ -123,4 +128,10 @@ export class Asset {
 
   @OneToMany(() => AssetSupport, (support) => support.asset)
   supports: AssetSupport[];
+
+  @ManyToOne(() => AssetCategory, (category) => category.assets)
+  @JoinColumn({
+    name: 'category_id',
+  })
+  category: AssetCategory;
 }

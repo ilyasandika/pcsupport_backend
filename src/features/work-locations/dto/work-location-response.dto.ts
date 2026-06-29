@@ -1,6 +1,6 @@
 import { Expose } from 'class-transformer';
 
-export class WorkLocationResponseDto {
+export class DetailWorkLocationResponseDto {
   @Expose()
   id: number;
 
@@ -24,4 +24,12 @@ export class WorkLocationResponseDto {
 
   @Expose()
   updatedAt: Date;
+}
+
+export class WorkLocationResponseDto {
+  @Expose()
+  id: number;
+
+  @Expose()
+  name: string;
 }

@@ -30,7 +30,6 @@ export class TicketsService {
     try {
       return await this.ticketRepository.manager.transaction(
         async (manager) => {
-          // let assetOwner;
           if (dto.assetId) {
             const assetAssignment =
               await this.assetAssignmentService.findLatestByAssetId(
@@ -164,6 +163,7 @@ export class TicketsService {
     const tickets = await this.ticketRepository.find({
       relations: {
         asset: {
+          category: true,
           assetAssignments: {
             employee: true,
           },

@@ -3,4 +3,5 @@ export enum AssetCategory {
   PersonalComputer = 'pc',
   Workstasion = 'ws',
   MobileWorkStation = 'mws',
+  Macbook = 'mac',
 }

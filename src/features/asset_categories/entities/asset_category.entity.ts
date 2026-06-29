@@ -2,32 +2,21 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  JoinColumn,
-  ManyToOne,
   OneToMany,
-  PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Asset } from '../../assets/entities/asset.entity';
-import { Vendor } from '../../vendors/entities/vendor.entity';
 
 @Entity({
-  name: 'projects',
+  name: 'asset_categories',
 })
-export class Project {
+export class AssetCategory {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({
-    unique: true,
-  })
+  @Column()
   name: string;
-
-  @Column({
-    name: 'vendor_id',
-  })
-  vendorId: number;
 
   @Column({
     nullable: true,
@@ -44,10 +33,6 @@ export class Project {
   })
   updatedAt: Date;
 
-  @OneToMany(() => Asset, (asset) => asset.project)
+  @OneToMany(() => Asset, (asset) => asset.category)
   assets: Asset[];
-
-  @ManyToOne(() => Vendor, (vendor) => vendor.projects)
-  @JoinColumn({ name: 'vendor_id' })
-  vendor: Vendor;
 }

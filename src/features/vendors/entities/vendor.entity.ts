@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { Asset } from '../../assets/entities/asset.entity';
 import { VendorSupportContact } from '../../vendor_support_contacts/entities/vendor_support_contact.entity';
+import { Project } from '../../projects/entities/project.entity';
 
 @Entity({
   name: 'vendors',
@@ -34,4 +35,7 @@ export class Vendor {
     (vendorSupportContact) => vendorSupportContact.vendor,
   )
   contacts: VendorSupportContact[];
+
+  @OneToMany(()=> Project, (project)=> project.vendor)
+  projects: Project[];
 }

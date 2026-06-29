@@ -23,7 +23,7 @@ import { GetTicketTrendDto } from './dto/trend-ticket.dto';
 import { TicketResponseDto } from './dto/ticket-response.dto';
 
 @Controller('tickets')
-@UseGuards(JwtAuthGuard, RolesGuard)
+// @UseGuards(JwtAuthGuard, RolesGuard)
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 

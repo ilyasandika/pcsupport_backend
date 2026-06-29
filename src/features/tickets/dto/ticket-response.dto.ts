@@ -1,45 +1,10 @@
 import { TicketStatus } from '../../../common/enums/ticket-status.enum';
 import { Expose, Type } from 'class-transformer';
 import { SlaPolicyResponseDto } from '../../sla-policies/dto/sla-policy-response.dto';
-import { Role } from '../../../common/enums/role.enum';
-import { AssetCategory } from '../../../common/enums/asset-type.enum';
-
-class Asset {
-  @Expose()
-  serialNumber: string;
-  @Expose()
-  assetTag: string;
-  @Expose()
-  hostname: string;
-  @Expose()
-  category: AssetCategory;
-
-  @Expose()
-  assetAssignment: {
-    name: string;
-    nik: string;
-    userNonEmployeeName?: string;
-  };
-}
-
-class User {
-  @Expose()
-  fullName: string;
-  @Expose()
-  role: Role;
-}
-
-class Employee {
-  @Expose()
-  name: string;
-  @Expose()
-  nik: string;
-}
-
-class Location {
-  @Expose()
-  name: string;
-}
+import { WorkLocationResponseDto } from '../../work-locations/dto/work-location-response.dto';
+import { UserResponseDto } from '../../users/dto/user-response.dto';
+import { EmployeeResponseDto } from '../../employees/dto/employee-response.dto';
+import { AssetResponseDto } from '../../assets/dto/asset-response.dto';
 
 export class TicketResponseDto {
   @Expose()
@@ -49,28 +14,28 @@ export class TicketResponseDto {
   fullNumber: string;
 
   @Expose()
-  @Type(() => Asset)
-  asset?: Asset;
+  @Type(() => AssetResponseDto)
+  asset?: AssetResponseDto;
 
   @Expose()
-  @Type(() => User)
-  engineer?: User;
+  @Type(() => UserResponseDto)
+  engineer?: UserResponseDto;
 
   @Expose()
-  @Type(() => Employee)
-  employee?: Employee;
+  @Type(() => EmployeeResponseDto)
+  employee?: EmployeeResponseDto;
 
   @Expose()
-  @Type(() => User)
-  createdBy: User;
+  @Type(() => UserResponseDto)
+  createdBy: UserResponseDto;
 
   @Expose()
   @Type(() => SlaPolicyResponseDto)
   slaPolicy: SlaPolicyResponseDto;
 
   @Expose()
-  @Type(() => Location)
-  location: Location;
+  @Type(() => WorkLocationResponseDto)
+  location: WorkLocationResponseDto;
 
   @Expose()
   problem: string;

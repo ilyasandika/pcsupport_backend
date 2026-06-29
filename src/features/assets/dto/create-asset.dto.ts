@@ -22,9 +22,8 @@ export class CreateAssetDto {
   hostname: string;
 
   @IsNotEmpty()
-  @IsString()
-  @IsEnum(AssetCategory)
-  category: AssetCategory;
+  @IsNumber()
+  category_id: number;
 
   @IsNotEmpty()
   @IsString()

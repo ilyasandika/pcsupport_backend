@@ -26,6 +26,11 @@ export class AssetSupport {
   })
   assetId: number;
 
+  @Column({
+    nullable: true,
+  })
+  name: string;
+
   @ManyToOne(() => Asset, (asset) => asset.supports)
   @JoinColumn({
     name: 'asset_id',

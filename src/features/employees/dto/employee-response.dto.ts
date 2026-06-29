@@ -1,7 +1,7 @@
 import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
 import { Expose } from 'class-transformer';
 
-export class EmployeeResponseDto {
+export class DetailEmployeeResponseDto {
   @Expose()
   id: number;
 
@@ -52,4 +52,15 @@ export class EmployeeResponseDto {
 
   @Expose()
   updatedAt: Date;
+}
+
+export class EmployeeResponseDto {
+  @Expose()
+  name: string;
+  @Expose()
+  nik: string;
+  @Expose()
+  position: string;
+  @Expose()
+  department: string;
 }
