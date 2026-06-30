@@ -56,6 +56,8 @@ export class DetailEmployeeResponseDto {
 
 export class EmployeeResponseDto {
   @Expose()
+  id: number;
+  @Expose()
   name: string;
   @Expose()
   nik: string;

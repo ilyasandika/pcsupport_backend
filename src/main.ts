@@ -4,10 +4,15 @@ import { globalValidationPipeConfig } from './common/configs/validation-pipe.con
 import { GlobalExceptionFilter } from './common/exceptions/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DatabaseExceptionFilter } from './common/exceptions/database-exception.filter';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.use(cookieParser());
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  });
   app.useGlobalPipes(globalValidationPipeConfig);
   app.useGlobalFilters(
     new GlobalExceptionFilter(),

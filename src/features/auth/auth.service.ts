@@ -24,15 +24,23 @@ export class AuthService {
       throw new UnauthorizedException('wrong username or password');
     }
 
-    const payload = { sub: user.id, username: user.username, role: user.role };
-
-    return {
+    const payload = {
+      sub: user.id,
       username: user.username,
       role: user.role,
-      id: user.id,
-      email: user.email,
       fullName: user.fullName,
-      token: await this.jwtService.signAsync(payload),
+    };
+    const token = await this.jwtService.signAsync(payload);
+
+    return {
+      user: {
+        username: user.username,
+        role: user.role,
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+      },
+      token,
     };
   }
 }

@@ -6,6 +6,11 @@ import { parse } from 'csv-parse';
 import { RawEmployeeCsv } from '../../common/interfaces/raw-employee-csv.interface';
 import { EmployeeContractType } from '../../common/enums/contract-type.enum';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { plainToInstance } from 'class-transformer';
+import {
+  DetailEmployeeResponseDto,
+  EmployeeResponseDto,
+} from './dto/employee-response.dto';
 
 @Injectable()
 export class EmployeesService {
@@ -68,8 +73,9 @@ export class EmployeesService {
     });
   }
 
-  async findAll(): Promise<Employee[]> {
-    return await this.employeeRepository.find();
+  async findAll(): Promise<DetailEmployeeResponseDto[]> {
+    const employees = await this.employeeRepository.find();
+    return plainToInstance(DetailEmployeeResponseDto, employees);
   }
 
   async findOne(id: number): Promise<Employee> {
