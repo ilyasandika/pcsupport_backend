@@ -212,18 +212,57 @@ export class TicketsService {
   }
 
   async findOne(id: number) {
-    try {
-      return await this.ticketRepository.findOneOrFail({
-        where: { id },
-        relations: {
-          asset: true,
-          createdBy: true,
-          engineer: true,
+    const ticket = await this.ticketRepository.findOne({
+      where: { id },
+      relations: {
+        asset: {
+          category: true,
+          assetAssignments: {
+            employee: true,
+          },
         },
-      });
-    } catch {
-      throw new NotFoundException('ticket not found');
+        createdBy: true,
+        engineer: true,
+        employee: true,
+        location: true,
+        slaPolicy: true,
+      },
+      order: {
+        createdAt: 'DESC',
+        asset: {
+          assetAssignments: {
+            assignedAt: 'DESC',
+          },
+        },
+      },
+    });
+    if (!ticket) throw new NotFoundException('ticket not found');
+    let formattedTicket;
+    if (
+      ticket &&
+      ticket.asset &&
+      ticket.asset.assetAssignments &&
+      ticket.asset.assetAssignments.length > 0
+    ) {
+      const lastAssigment = ticket.asset.assetAssignments[0];
+      const user = {
+        name: ticket.employee?.name,
+        nik: ticket.employee?.nik,
+        userNonEmployeeName: lastAssigment.userNonEmployeeName,
+      };
+      formattedTicket = {
+        ...ticket,
+        asset: {
+          ...ticket.asset,
+          assetAssignment: user,
+        },
+      };
+    } else {
+      formattedTicket = {
+        ...ticket,
+      };
     }
+    return plainToInstance(TicketResponseDto, formattedTicket);
   }
 
   async update(id: number, dto: UpdateTicketDto) {
