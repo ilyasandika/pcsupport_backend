@@ -5,6 +5,7 @@ import { WorkLocationResponseDto } from '../../work-locations/dto/work-location-
 import { UserResponseDto } from '../../users/dto/user-response.dto';
 import { EmployeeResponseDto } from '../../employees/dto/employee-response.dto';
 import { AssetResponseDto } from '../../assets/dto/asset-response.dto';
+import { OmitType } from '@nestjs/mapped-types';
 
 export class TicketResponseDto {
   @Expose()
@@ -58,3 +59,13 @@ export class TicketResponseDto {
   @Expose()
   createdAt: Date;
 }
+
+export class TicketResponseDtoForAsset extends OmitType(TicketResponseDto, [
+  'employee',
+  'solution',
+  'slaPolicy',
+  'asset',
+  'location',
+  'remarks',
+  'createdBy',
+] as const) {}
