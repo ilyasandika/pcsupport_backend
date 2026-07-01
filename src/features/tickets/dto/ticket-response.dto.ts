@@ -62,7 +62,6 @@ export class TicketResponseDto {
 
 export class TicketResponseDtoForAsset extends OmitType(TicketResponseDto, [
   'employee',
-  'solution',
   'slaPolicy',
   'asset',
   'location',
