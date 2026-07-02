@@ -190,11 +190,13 @@ export class TicketsService {
         ticket.asset.assetAssignments &&
         ticket.asset.assetAssignments.length > 0
       ) {
-        const lastAssigment = ticket.asset.assetAssignments[0];
+        const lastAssigment = ticket.asset.assetAssignments.find(
+          (value) => value.picEmployeeId == ticket.employeeId,
+        );
         const user = {
           name: ticket.employee?.name,
           nik: ticket.employee?.nik,
-          userNonEmployeeName: lastAssigment.userNonEmployeeName,
+          userNonEmployeeName: lastAssigment?.userNonEmployeeName,
         };
         return {
           ...ticket,
@@ -244,11 +246,13 @@ export class TicketsService {
       ticket.asset.assetAssignments &&
       ticket.asset.assetAssignments.length > 0
     ) {
-      const lastAssigment = ticket.asset.assetAssignments[0];
+      const lastAssigment = ticket.asset.assetAssignments.find(
+        (value) => value.picEmployeeId == ticket.employeeId,
+      );
       const user = {
         name: ticket.employee?.name,
         nik: ticket.employee?.nik,
-        userNonEmployeeName: lastAssigment.userNonEmployeeName,
+        userNonEmployeeName: lastAssigment?.userNonEmployeeName,
       };
       formattedTicket = {
         ...ticket,
@@ -353,7 +357,6 @@ export class TicketsService {
       }),
       this.ticketRepository.count({ where: { status: TicketStatus.Resolved } }),
     ]);
-    Logger.log(inProgress);
 
     return {
       total,

@@ -58,7 +58,7 @@ export class EmployeesService {
               retireDate: formattedRetireDate,
             };
           });
-          Logger.log(mappedData);
+
           resolve(this.bulkSaveEmployee(mappedData));
         },
       );

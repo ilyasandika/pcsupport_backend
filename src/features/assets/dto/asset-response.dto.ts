@@ -1,9 +1,13 @@
 import { Expose, Type } from 'class-transformer';
 import { WorkLocationResponseDto } from '../../work-locations/dto/work-location-response.dto';
-import { AssetAssignmentResponseDto } from '../../asset_assignments/dto/asset_assignment-response.dto';
+import {
+  AssetAssignmentResponseDto,
+  DetailAssetAssignmentResponseDto,
+} from '../../asset_assignments/dto/asset_assignment-response.dto';
 import { AssetSupportResponseDto } from '../../asset_supports/dto/asset_support-response.dto';
 import { AssetCategoryResponseDto } from '../../asset_categories/dto/asset_category-response.dto';
 import { ProjectResponseDto } from '../../projects/dto/project-response.dto';
+import { TicketResponseDtoForAsset } from '../../tickets/dto/ticket-response.dto';
 
 export class DetailAssetResponseDto {
   @Expose()
@@ -27,9 +31,6 @@ export class DetailAssetResponseDto {
 
   @Expose()
   model?: string;
-
-  @Expose()
-  workLocationId: number;
 
   @Expose()
   warrantyDate?: Date;
@@ -64,14 +65,20 @@ export class DetailAssetResponseDto {
   supports: AssetSupportResponseDto[];
 
   @Expose()
-  @Type(() => AssetAssignmentResponseDto)
-  assetAssignment: AssetAssignmentResponseDto;
+  @Type(() => DetailAssetAssignmentResponseDto)
+  assetAssignments: DetailAssetAssignmentResponseDto[];
 
   @Expose()
   @Type(() => ProjectResponseDto)
   project: ProjectResponseDto;
 
+  @Expose()
+  @Type(() => TicketResponseDtoForAsset)
+  tickets?: TicketResponseDtoForAsset[];
+
+  @Expose()
   createdAt: Date;
+
   updatedAt: Date;
 }
 

@@ -53,7 +53,6 @@ export class AssetsService {
       );
     }
     const asset = this.assetRepository.create(dto);
-    Logger.log(asset);
     return await this.assetRepository.save(asset);
   }
 
@@ -91,18 +90,33 @@ export class AssetsService {
   }
 
   async findOne(id: number) {
-    try {
-      return await this.assetRepository.findOneOrFail({
-        where: { id },
-        relations: {
-          workLocation: true,
-          supports: true,
-          project: true,
+    const asset = await this.assetRepository.findOne({
+      where: { id },
+      relations: {
+        workLocation: true,
+        supports: true,
+        category: true,
+        project: {
+          vendor: true,
         },
-      });
-    } catch {
-      throw new NotFoundException('asset not found');
-    }
+        assetAssignments: {
+          employee: true,
+        },
+        tickets: {
+          engineer: true,
+        },
+      },
+      order: {
+        assetAssignments: {
+          assignedAt: 'DESC',
+        },
+        tickets: {
+          createdAt: 'DESC',
+        },
+      },
+    });
+    if (!asset) throw new NotFoundException('asset not found');
+    return plainToInstance(DetailAssetResponseDto, asset);
   }
 
   async update(id: number, dto: UpdateAssetDto) {

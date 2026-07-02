@@ -44,8 +44,6 @@ export class DatabaseExceptionFilter implements ExceptionFilter {
 
     const drv = exception.driverError as DatabaseError;
     const errorCode = drv.code;
-
-    Logger.log(drv);
     const field = this.extractFieldFromDetail(drv.detail!);
     const errorMessage = {
       field: field,
