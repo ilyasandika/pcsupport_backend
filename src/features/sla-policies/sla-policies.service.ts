@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { SlaPolicy } from './entities/sla-policy.entity';
 import { CreateSlaPolicyDto } from './dto/create-sla-policy.dto';
 import { UpdateSlaPolicyDto } from './dto/update-sla-policy.dto';
+import { plainToInstance } from 'class-transformer';
+import { SlaPolicyResponseDto } from './dto/sla-policy-response.dto';
 
 @Injectable()
 export class SlaPoliciesService {
@@ -18,7 +20,8 @@ export class SlaPoliciesService {
   }
 
   async findAll() {
-    return await this.slaPolicyRepository.find();
+    const slas = await this.slaPolicyRepository.find();
+    return plainToInstance(SlaPolicyResponseDto, slas);
   }
 
   async findOne(id: number) {
