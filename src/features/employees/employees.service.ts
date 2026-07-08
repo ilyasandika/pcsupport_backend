@@ -73,16 +73,36 @@ export class EmployeesService {
     });
   }
 
-  async findAll(): Promise<DetailEmployeeResponseDto[]> {
+  async findAll(forList = false) {
     const employees = await this.employeeRepository.find();
+    if (forList) return plainToInstance(EmployeeResponseDto, employees);
     return plainToInstance(DetailEmployeeResponseDto, employees);
   }
 
-  async findOne(id: number): Promise<Employee> {
-    const user = await this.employeeRepository.findOneBy({ id });
-    if (!user) {
-      throw new NotFoundException(`user does not exist`);
+  async findOne(id: number): Promise<DetailEmployeeResponseDto> {
+    const employee = await this.employeeRepository.findOne({
+      where: { id },
+      relations: {
+        assetAssignments: {
+          asset: true,
+          employee: true,
+        },
+        tickets: {
+          engineer: true,
+        },
+      },
+      order: {
+        assetAssignments: {
+          createdAt: 'DESC',
+        },
+        tickets: {
+          createdAt: 'DESC',
+        },
+      },
+    });
+    if (!employee) {
+      throw new NotFoundException(`employee does not exist`);
     }
-    return user;
+    return plainToInstance(DetailEmployeeResponseDto, employee);
   }
 }

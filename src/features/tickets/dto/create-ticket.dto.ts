@@ -29,6 +29,10 @@ export class CreateTicketDto {
   @IsString()
   problem: string;
 
+  @IsNotEmpty()
+  @IsNumber()
+  slaPolicyId: number;
+
   @IsString()
   @IsOptional()
   solution?: string;

@@ -40,6 +40,11 @@ export class EmployeesController {
     return await this.employeesService.findAll();
   }
 
+  @Get('list')
+  async findAllForList() {
+    return await this.employeesService.findAll(true);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return await this.employeesService.findOne(+id);

@@ -16,7 +16,10 @@ import {
   plainToClass,
   plainToInstance,
 } from 'class-transformer';
-import { DetailAssetResponseDto } from './dto/asset-response.dto';
+import {
+  AssetResponseDto,
+  DetailAssetResponseDto,
+} from './dto/asset-response.dto';
 
 @Injectable()
 export class AssetsService {
@@ -56,7 +59,7 @@ export class AssetsService {
     return await this.assetRepository.save(asset);
   }
 
-  async findAll() {
+  async findAll(forList = false) {
     const asset = await this.assetRepository.find({
       relations: {
         workLocation: true,
@@ -86,6 +89,8 @@ export class AssetsService {
       }
       return asset;
     });
+
+    if (forList) return plainToInstance(AssetResponseDto, formattedAsset);
     return plainToInstance(DetailAssetResponseDto, formattedAsset);
   }
 

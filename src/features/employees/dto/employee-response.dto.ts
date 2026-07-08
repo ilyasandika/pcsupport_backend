@@ -1,5 +1,9 @@
 import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
+import {
+  DetailAssetAssignmentResponseDto,
+} from '../../asset_assignments/dto/asset_assignment-response.dto';
+import { TicketResponseDtoForAsset } from '../../tickets/dto/ticket-response.dto';
 
 export class DetailEmployeeResponseDto {
   @Expose()
@@ -40,6 +44,14 @@ export class DetailEmployeeResponseDto {
 
   @Expose()
   department: string;
+
+  @Expose()
+  @Type(() => TicketResponseDtoForAsset)
+  tickets: TicketResponseDtoForAsset[];
+
+  @Expose()
+  @Type(() => DetailAssetAssignmentResponseDto)
+  assetAssignments: DetailAssetAssignmentResponseDto[];
 
   @Expose()
   status?: boolean;

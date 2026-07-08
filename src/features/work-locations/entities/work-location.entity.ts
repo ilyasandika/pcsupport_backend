@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { Asset } from '../../assets/entities/asset.entity';
 import { Ticket } from '../../tickets/entities/ticket.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('work_locations')
 export class WorkLocation {
@@ -51,4 +52,7 @@ export class WorkLocation {
 
   @OneToMany(() => Ticket, (ticket) => ticket.location)
   tickets: Ticket[];
+
+  @OneToMany(() => User, (user) => user.workLocation)
+  users: User;
 }

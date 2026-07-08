@@ -1,15 +1,14 @@
 import { Expose, Type } from 'class-transformer';
 import { EmployeeResponseDto } from '../../employees/dto/employee-response.dto';
+import { AssetResponseDto } from '../../assets/dto/asset-response.dto';
 
 export class DetailAssetAssignmentResponseDto {
   @Expose()
   id: number;
 
   @Expose()
-  assetId: number;
-
-  @Expose()
-  picEmployeeId: number;
+  @Type(() => AssetResponseDto)
+  asset: AssetResponseDto;
 
   @Expose()
   @Type(() => EmployeeResponseDto)

@@ -37,12 +37,9 @@ export class Asset {
   @Column()
   hostname: string;
 
-  @Column()
-  exCategory: AssetCategoryType;
-
   @Column({
     name: 'category_id',
-    nullable: true
+    nullable: true,
   })
   categoryId: number;
 

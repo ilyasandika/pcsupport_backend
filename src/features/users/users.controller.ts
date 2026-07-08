@@ -15,10 +15,8 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
-@UseInterceptors(ClassSerializerInterceptor)
 @Controller('users')
 // @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.Engineer, Role.Admin)
@@ -33,6 +31,11 @@ export class UsersController {
   @Get()
   findAll() {
     return this.usersService.findAll();
+  }
+
+  @Get('engineers')
+  findEngineers() {
+    return this.usersService.findEngineers();
   }
 
   @Get(':id')
@@ -55,5 +58,3 @@ export class UsersController {
     return this.usersService.remove(+id);
   }
 }
-
-import { RolesGuard } from '../../common/guards/roles.guard';

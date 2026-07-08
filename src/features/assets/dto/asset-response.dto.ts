@@ -84,11 +84,17 @@ export class DetailAssetResponseDto {
 
 export class AssetResponseDto {
   @Expose()
+  id: number;
+  @Expose()
   serialNumber: string;
   @Expose()
   assetTag: string;
   @Expose()
   hostname: string;
+  @Expose()
+  brand: string;
+  @Expose()
+  model: string;
   @Expose()
   @Type(() => AssetCategoryResponseDto)
   category: AssetCategoryResponseDto;

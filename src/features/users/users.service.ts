@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -12,6 +13,12 @@ import * as bcrypt from 'bcrypt';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 import { UserForLogin } from '../../common/types/user-login.type';
+import { plainToInstance } from 'class-transformer';
+import {
+  DetailUserResponseDto,
+  UserResponseDto,
+} from './dto/user-response.dto';
+import { Role } from '../../common/enums/role.enum';
 
 @Injectable()
 export class UsersService {
@@ -47,17 +54,44 @@ export class UsersService {
   }
 
   async findAll() {
-    return await this.userRepository.find();
+    const users = await this.userRepository.find();
+    return plainToInstance(DetailUserResponseDto, users);
+  }
+
+  async findEngineers() {
+    const engineers = await this.userRepository.find({
+      where: {
+        role: Role.Engineer,
+      },
+      relations: {
+        workLocation: true,
+      },
+    });
+
+    return plainToInstance(DetailUserResponseDto, engineers);
   }
 
   async findOne(id: number) {
-    const user = await this.userRepository.findOneBy({ id });
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: {
+        tickets: {
+          engineer: true,
+          employee: true,
+        },
+      },
+      order: {
+        tickets: {
+          createdAt: 'DESC',
+        },
+      },
+    });
 
     if (!user) {
       throw new NotFoundException(`user does not exist`);
     }
 
-    return user;
+    return plainToInstance(DetailUserResponseDto, user);
   }
 
   async update(id: number, dto: UpdateUserDto) {
