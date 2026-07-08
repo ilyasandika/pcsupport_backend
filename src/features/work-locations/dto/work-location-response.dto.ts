@@ -19,10 +19,10 @@ export class DetailWorkLocationResponseDto {
   @Expose()
   latitude: number;
 
-  @Expose()
+
   createdAt: Date;
 
-  @Expose()
+
   updatedAt: Date;
 }
 

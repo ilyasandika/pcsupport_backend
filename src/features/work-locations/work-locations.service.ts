@@ -4,6 +4,8 @@ import { UpdateWorkLocationDto } from './dto/update-work-location.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WorkLocation } from './entities/work-location.entity';
 import { Repository } from 'typeorm';
+import { plainToInstance } from 'class-transformer';
+import { DetailWorkLocationResponseDto } from './dto/work-location-response.dto';
 
 @Injectable()
 export class WorkLocationsService {
@@ -17,7 +19,8 @@ export class WorkLocationsService {
   }
 
   async findAll() {
-    return await this.workLocationRepository.find();
+    const locations = await this.workLocationRepository.find();
+    return plainToInstance(DetailWorkLocationResponseDto, locations);
   }
 
   async findOne(id: number) {
