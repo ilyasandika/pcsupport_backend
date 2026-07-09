@@ -1,7 +1,4 @@
-import { TicketStatus } from '../../../common/enums/ticket-status.enum';
 import {
-  IsDateString,
-  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -10,20 +7,16 @@ import {
 
 export class CreateTicketDto {
   @IsOptional()
-  @IsNumber()
-  assetId?: number;
+  @IsString()
+  assetSn?: string;
 
   @IsOptional()
-  @IsNumber()
-  employeeId?: number;
+  @IsString()
+  employeeNik?: string;
 
   @IsOptional()
   @IsNumber()
   engineerId?: number;
-
-  // @IsNotEmpty()
-  // @IsEnum(TicketStatus)
-  // status: TicketStatus;
 
   @IsNotEmpty()
   @IsString()
@@ -36,10 +29,6 @@ export class CreateTicketDto {
   @IsString()
   @IsOptional()
   solution?: string;
-
-  // @IsDateString()
-  // @IsOptional()
-  // solvedAt?: Date;
 
   @IsOptional()
   @IsString()
