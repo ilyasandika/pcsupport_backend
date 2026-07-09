@@ -24,12 +24,12 @@ export class AssetAssignmentsController {
 
   @Get('assets/:id')
   async findByAssetId(@Param('id') id: string) {
-    return await this.assetAssignmentsService.findAllByAssetId(+id);
+    return await this.assetAssignmentsService.findAllByAssetSn(id);
   }
 
   @Get('employees/:id')
-  async findByEmployeeId(@Param('id') id: string){
-    return await this.assetAssignmentsService.findAllByEmployeeId(+id);
+  async findByEmployeeId(@Param('id') id: string) {
+    return await this.assetAssignmentsService.findAllByEmployeeNik(id);
   }
 
   @Get(':id')
