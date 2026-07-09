@@ -35,13 +35,13 @@ export class Ticket {
   fullNumber: string;
 
   @Column({
-    name: 'asset_id',
+    name: 'asset_sn',
     nullable: true,
   })
-  assetId?: number;
+  assetSN?: string;
 
   @ManyToOne(() => Asset, (asset) => asset.tickets)
-  @JoinColumn({ name: 'asset_id' })
+  @JoinColumn({ name: 'asset_sn' })
   asset: Asset;
 
   @Column({
@@ -51,7 +51,7 @@ export class Ticket {
   employeeNik?: string;
 
   @ManyToOne(() => Employee, (employee) => employee.tickets)
-  @JoinColumn({ name: 'employee_id' })
+  @JoinColumn({ name: 'employee_nik' })
   employee: Employee;
 
   @Column({
