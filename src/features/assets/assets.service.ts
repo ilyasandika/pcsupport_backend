@@ -1,7 +1,6 @@
 import {
   ConflictException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateAssetDto } from './dto/create-asset.dto';
@@ -10,12 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Asset } from './entities/asset.entity';
 import { Repository } from 'typeorm';
 import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
-import { AssetCategory } from '../../common/enums/asset-type.enum';
-import {
-  instanceToPlain,
-  plainToClass,
-  plainToInstance,
-} from 'class-transformer';
+import { plainToInstance } from 'class-transformer';
 import {
   AssetResponseDto,
   DetailAssetResponseDto,
@@ -94,9 +88,9 @@ export class AssetsService {
     return plainToInstance(DetailAssetResponseDto, formattedAsset);
   }
 
-  async findOne(id: number) {
+  async findOne(serialNumber: string) {
     const asset = await this.assetRepository.findOne({
-      where: { id },
+      where: { serialNumber },
       relations: {
         workLocation: true,
         supports: true,
@@ -124,16 +118,16 @@ export class AssetsService {
     return plainToInstance(DetailAssetResponseDto, asset);
   }
 
-  async update(id: number, dto: UpdateAssetDto) {
-    const asset = await this.assetRepository.findOneBy({ id });
+  async update(serialNumber: string, dto: UpdateAssetDto) {
+    const asset = await this.assetRepository.findOneBy({ serialNumber });
     if (!asset) throw new NotFoundException('asset not found');
     this.assetRepository.merge(asset, dto);
     return await this.assetRepository.save(asset);
   }
 
-  async remove(id: number) {
-    const asset = await this.assetRepository.findOneBy({ id });
+  async remove(serialNumber: string) {
+    const asset = await this.assetRepository.findOneBy({ serialNumber });
     if (!asset) throw new NotFoundException('asset not found');
-    return await this.assetRepository.delete(id);
+    return await this.assetRepository.delete(serialNumber);
   }
 }
