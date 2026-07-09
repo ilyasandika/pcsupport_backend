@@ -45,10 +45,10 @@ export class Ticket {
   asset: Asset;
 
   @Column({
-    name: 'employee_id',
+    name: 'employee_nik',
     nullable: true,
   })
-  employeeId?: number;
+  employeeNik?: string;
 
   @ManyToOne(() => Employee, (employee) => employee.tickets)
   @JoinColumn({ name: 'employee_id' })

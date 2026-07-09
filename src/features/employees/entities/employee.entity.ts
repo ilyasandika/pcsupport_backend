@@ -4,24 +4,17 @@ import {
   Entity,
   OneToMany,
   PrimaryColumn,
-  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
 import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
-import { Asset } from '../../assets/entities/asset.entity';
 import { Ticket } from '../../tickets/entities/ticket.entity';
 
 @Entity({
   name: 'employees',
 })
 export class Employee {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column({
-    unique: true,
-  })
+  @PrimaryColumn()
   nik: string;
 
   @Column()

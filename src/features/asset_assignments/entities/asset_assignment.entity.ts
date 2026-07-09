@@ -4,7 +4,6 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -24,12 +23,12 @@ export class AssetAssignment {
   assetId: number;
 
   @Column({
-    name: 'pic_employee_id',
+    name: 'pic_employee_nik',
   })
-  picEmployeeId: number;
+  picEmployeeNik: string;
 
   @ManyToOne(() => Employee, (employee) => employee.assetAssignments)
-  @JoinColumn({ name: 'pic_employee_id' })
+  @JoinColumn({ name: 'pic_employee_nik' })
   employee: Employee;
 
   @Column({
