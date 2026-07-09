@@ -30,19 +30,18 @@ export class TicketsService {
     try {
       return await this.ticketRepository.manager.transaction(
         async (manager) => {
-
-          if (dto.assetId) {
+          if (dto.assetSn) {
             const assetAssignment =
-              await this.assetAssignmentService.findLatestByAssetId(
-                dto.assetId,
+              await this.assetAssignmentService.findLatestByAssetSn(
+                dto.assetSn,
                 manager,
               );
 
             if (assetAssignment) {
               //dto employee id tidak sesuai dengan data kepemilikan asset dan belum dikembalikan
               if (
-                dto.employeeId &&
-                assetAssignment.picEmployeeId != dto.employeeId &&
+                dto.employeeNik &&
+                assetAssignment.picEmployeeNik != dto.employeeNik &&
                 !assetAssignment.returnedAt
               ) {
                 throw new BadRequestException(
@@ -51,18 +50,18 @@ export class TicketsService {
               }
 
               //dto employee ada, asset sudah dikembalikan.
-              if (dto.employeeId && assetAssignment.returnedAt) {
+              if (dto.employeeNik && assetAssignment.returnedAt) {
                 throw new BadRequestException(
                   'the specified asset has returned, employee id should empty',
                 );
               }
 
               //dto employee id kosong dan asset belum dikembalikan.
-              if (dto.employeeId == undefined && !assetAssignment.returnedAt) {
+              if (dto.employeeNik == undefined && !assetAssignment.returnedAt) {
                 throw new BadRequestException('this asset still have an owner');
               }
             } else {
-              if (dto.employeeId) {
+              if (dto.employeeNik) {
                 throw new BadRequestException(
                   'this is new asset, please assign the asset first',
                 );
@@ -194,7 +193,7 @@ export class TicketsService {
         ticket.asset.assetAssignments.length > 0
       ) {
         const lastAssigment = ticket.asset.assetAssignments.find(
-          (value) => value.picEmployeeId == ticket.employeeId,
+          (value) => value.picEmployeeNik == ticket.employeeNik,
         );
         const user = {
           name: ticket.employee?.name,
@@ -250,7 +249,7 @@ export class TicketsService {
       ticket.asset.assetAssignments.length > 0
     ) {
       const lastAssigment = ticket.asset.assetAssignments.find(
-        (value) => value.picEmployeeId == ticket.employeeId,
+        (value) => value.picEmployeeNik == ticket.employeeNik,
       );
       const user = {
         name: ticket.employee?.name,
