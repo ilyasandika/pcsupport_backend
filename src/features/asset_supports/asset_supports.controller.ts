@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { AssetSupportsService } from './asset_supports.service';
 import { CreateAssetSupportDto } from './dto/create-asset_support.dto';
 import { UpdateAssetSupportDto } from './dto/update-asset_support.dto';
