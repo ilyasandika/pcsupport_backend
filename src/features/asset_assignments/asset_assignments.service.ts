@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateAssetAssignmentDto } from './dto/create-asset_assignment.dto';
 import { UpdateAssetAssignmentDto } from './dto/update-asset_assignment.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,7 +17,6 @@ import {
 import { EmployeesService } from '../employees/employees.service';
 import { AssetsService } from '../assets/assets.service';
 import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
-import { ErrorResponseBuilder } from '../../common/utils/error-response-builder';
 
 @Injectable()
 export class AssetAssignmentsService {
@@ -27,7 +30,7 @@ export class AssetAssignmentsService {
   async create(dto: CreateAssetAssignmentDto) {
     const lastUse = await this.assetAssignmentRepository.findOne({
       where: {
-        assetId: dto.assetId,
+        assetSn: dto.assetSn,
         returnedAt: IsNull(),
       },
     });
@@ -56,7 +59,7 @@ export class AssetAssignmentsService {
     // C = Assign Lama
     const overlappingAssignment = await this.assetAssignmentRepository.findOne({
       where: {
-        assetId: dto.assetId,
+        assetSn: dto.assetSn,
         assignedAt: LessThanOrEqual(
           dto.returnedAt ? new Date(dto.returnedAt) : new Date('9999-12-31'),
         ),
@@ -72,18 +75,18 @@ export class AssetAssignmentsService {
       );
     }
 
-    const employee = await this.employeeService.findOne(dto.picEmployeeId);
+    const employee = await this.employeeService.findOne(dto.picEmployeeNik);
     if (!employee) throw new NotFoundException('employee not found');
-    const asset = await this.assetService.findOne(dto.assetId);
+    const asset = await this.assetService.findOne(dto.assetSn);
     if (!asset) throw new NotFoundException('asset not found');
     const assignment = this.assetAssignmentRepository.create(dto);
     return await this.assetAssignmentRepository.save(assignment);
   }
 
-  async findAllByAssetId(assetId: number) {
+  async findAllByAssetId(assetSn: string) {
     return await this.assetAssignmentRepository.find({
       where: {
-        assetId,
+        assetSn,
       },
       order: {
         assignedAt: 'DESC',
@@ -95,9 +98,9 @@ export class AssetAssignmentsService {
     });
   }
 
-  async findAllByEmployeeId(employeeId: number) {
+  async findAllByEmployeeId(employeeNik: string) {
     return await this.assetAssignmentRepository.find({
-      where: { picEmployeeId: employeeId },
+      where: { picEmployeeNik: employeeNik },
       order: {
         assignedAt: 'DESC',
       },
@@ -108,12 +111,13 @@ export class AssetAssignmentsService {
     });
   }
 
-  async findLatestByAssetId(assetId: number, manager?: EntityManager) {
+  async findLatestByAssetSn(assetSn: string, manager?: EntityManager) {
     try {
-
-      const repo = manager? manager.getRepository(AssetAssignment) : this.assetAssignmentRepository;
+      const repo = manager
+        ? manager.getRepository(AssetAssignment)
+        : this.assetAssignmentRepository;
       return await repo.findOneOrFail({
-        where: { assetId },
+        where: { assetSn },
         order: {
           assignedAt: 'DESC',
         },
