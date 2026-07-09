@@ -21,9 +21,9 @@ export class CreateTicketDto {
   @IsNumber()
   engineerId?: number;
 
-  @IsNotEmpty()
-  @IsEnum(TicketStatus)
-  status: TicketStatus;
+  // @IsNotEmpty()
+  // @IsEnum(TicketStatus)
+  // status: TicketStatus;
 
   @IsNotEmpty()
   @IsString()
@@ -37,9 +37,9 @@ export class CreateTicketDto {
   @IsOptional()
   solution?: string;
 
-  @IsDateString()
-  @IsOptional()
-  solvedAt?: Date;
+  // @IsDateString()
+  // @IsOptional()
+  // solvedAt?: Date;
 
   @IsOptional()
   @IsString()
@@ -47,5 +47,5 @@ export class CreateTicketDto {
 
   @IsOptional()
   @IsString()
-  fullNumberTemplate: string;
+  fullNumberTemplate?: string;
 }

@@ -30,6 +30,7 @@ export class TicketsService {
     try {
       return await this.ticketRepository.manager.transaction(
         async (manager) => {
+
           if (dto.assetId) {
             const assetAssignment =
               await this.assetAssignmentService.findLatestByAssetId(
@@ -94,13 +95,15 @@ export class TicketsService {
             fullNumber,
           });
 
-          return await manager.save(Ticket, newTicket);
+          const savedTicket = manager.create(Ticket, newTicket);
+          return await manager.save(Ticket, savedTicket);
         },
       );
     } catch (e) {
       if (e instanceof HttpException) {
         throw e;
       }
+      Logger.error(e);
       throw new InternalServerErrorException('server is busy');
     }
   }

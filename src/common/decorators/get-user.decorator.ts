@@ -1,4 +1,4 @@
-import { createParamDecorator, ExecutionContext, Logger } from '@nestjs/common';
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 

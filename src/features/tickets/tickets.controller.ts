@@ -23,7 +23,7 @@ import { GetTicketTrendDto } from './dto/trend-ticket.dto';
 import { TicketResponseDto } from './dto/ticket-response.dto';
 
 @Controller('tickets')
-// @UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
@@ -33,6 +33,7 @@ export class TicketsController {
     @Body() dto: CreateTicketDto,
     @GetUser() user: jwtPayloadInterface.JwtPayload,
   ) {
+    Logger.log(user);
     return await this.ticketsService.create(dto, user.sub as number);
   }
 
