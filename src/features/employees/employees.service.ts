@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Employee } from './entities/employee.entity';
 import { Repository } from 'typeorm';
@@ -79,9 +79,9 @@ export class EmployeesService {
     return plainToInstance(DetailEmployeeResponseDto, employees);
   }
 
-  async findOne(id: number): Promise<DetailEmployeeResponseDto> {
+  async findOne(nik: string): Promise<DetailEmployeeResponseDto> {
     const employee = await this.employeeRepository.findOne({
-      where: { id },
+      where: { nik },
       relations: {
         assetAssignments: {
           asset: true,
