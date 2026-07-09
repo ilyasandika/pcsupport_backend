@@ -47,6 +47,6 @@ export class EmployeesController {
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return await this.employeesService.findOne(+id);
+    return await this.employeesService.findOne(id);
   }
 }
