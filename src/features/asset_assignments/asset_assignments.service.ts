@@ -83,7 +83,7 @@ export class AssetAssignmentsService {
     return await this.assetAssignmentRepository.save(assignment);
   }
 
-  async findAllByAssetId(assetSn: string) {
+  async findAllByAssetSn(assetSn: string) {
     return await this.assetAssignmentRepository.find({
       where: {
         assetSn,
@@ -98,7 +98,7 @@ export class AssetAssignmentsService {
     });
   }
 
-  async findAllByEmployeeId(employeeNik: string) {
+  async findAllByEmployeeNik(employeeNik: string) {
     return await this.assetAssignmentRepository.find({
       where: { picEmployeeNik: employeeNik },
       order: {
