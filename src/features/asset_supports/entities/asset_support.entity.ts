@@ -1,7 +1,8 @@
 import {
   Column,
   CreateDateColumn,
-  Entity, JoinColumn,
+  Entity,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -22,20 +23,20 @@ export class AssetSupport {
   serialNumber: string;
 
   @Column({
-    name: 'asset_id',
+    name: 'asset_sn',
   })
-  assetId: number;
+  assetSn: string;
+
+  @ManyToOne(() => Asset, (asset) => asset.supports)
+  @JoinColumn({
+    name: 'asset_sn',
+  })
+  asset: Asset;
 
   @Column({
     nullable: true,
   })
   name: string;
-
-  @ManyToOne(() => Asset, (asset) => asset.supports)
-  @JoinColumn({
-    name: 'asset_id',
-  })
-  asset: Asset;
 
   @Column()
   type: AssetSupportType;

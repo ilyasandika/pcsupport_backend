@@ -1,14 +1,14 @@
 import { AssetSupportType } from '../../../common/enums/asset-support-type.enum';
-import { IsEnum, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateAssetSupportDto {
   @IsString()
   @IsNotEmpty()
   serialNumber: string;
 
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  assetId: number;
+  assetSn: string;
 
   @IsEnum(AssetSupportType)
   @IsNotEmpty()

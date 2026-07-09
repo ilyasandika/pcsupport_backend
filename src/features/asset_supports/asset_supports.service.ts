@@ -15,7 +15,7 @@ export class AssetSupportsService {
   ) {}
 
   async create(dto: CreateAssetSupportDto) {
-    await this.assetService.findOne(dto.assetId);
+    await this.assetService.findOne(dto.assetSn);
     const support = this.assetSupportRepository.create(dto);
     return await this.assetSupportRepository.save(support);
   }
