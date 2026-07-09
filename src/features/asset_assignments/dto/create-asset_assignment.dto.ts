@@ -1,6 +1,7 @@
 import {
   IsBoolean,
-  IsDateString, isEmpty,
+  IsDateString,
+  isEmpty,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -14,11 +15,11 @@ import { AssetAssignment } from '../entities/asset_assignment.entity';
 export class CreateAssetAssignmentDto {
   @IsNumber()
   @IsNotEmpty()
-  assetId: number;
+  assetSn: string;
 
   @IsNumber()
   @IsNotEmpty()
-  picEmployeeId: number;
+  picEmployeeNik: string;
 
   @IsString()
   @IsOptional()
