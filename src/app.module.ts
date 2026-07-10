@@ -17,6 +17,7 @@ import { AssetSupportsModule } from './features/asset_supports/asset_supports.mo
 import { ProjectsModule } from './features/projects/projects.module';
 import { SlaPoliciesModule } from './features/sla-policies/sla-policies.module';
 import { AssetCategoriesModule } from './features/asset_categories/asset_categories.module';
+import { TemplatesModule } from './features/templates/templates.module';
 
 @Module({
   imports: [
@@ -31,7 +32,7 @@ import { AssetCategoriesModule } from './features/asset_categories/asset_categor
       port: parseInt(process.env.DB_PORT || '3306'),
       username: process.env.DB_USERNAME || 'root',
       password: process.env.DB_PASSWORD || 'root',
-      database: process.env.DB_DATABASE || 'pcsupport',
+      database: process.env.DB_NAME || 'pcsupport',
       autoLoadEntities: true,
       synchronize: process.env.NODE_ENV == 'development', //pastikan false ya nanti cok kalo udah prod
     }),
@@ -52,6 +53,7 @@ import { AssetCategoriesModule } from './features/asset_categories/asset_categor
     ProjectsModule,
     SlaPoliciesModule,
     AssetCategoriesModule,
+    TemplatesModule,
   ],
   controllers: [],
   providers: [],
