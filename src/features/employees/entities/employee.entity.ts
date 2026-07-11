@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryColumn,
@@ -57,11 +58,12 @@ export class Employee {
   department: string;
 
   @Column({
-    nullable: true,
+    name: 'work_location_id',
   })
   workLocationId: number;
 
   @ManyToOne(() => WorkLocation, (workLocation) => workLocation.employees)
+  @JoinColumn({ name: 'work_location_id' })
   workLocation: WorkLocation;
 
   @Column()
