@@ -9,6 +9,7 @@ import {
   UseGuards,
   Logger,
   Query,
+  Res,
 } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -21,6 +22,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { GetTicketTrendDto } from './dto/trend-ticket.dto';
 import { TicketResponseDto } from './dto/ticket-response.dto';
+import express from 'express';
 
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -74,5 +76,14 @@ export class TicketsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.ticketsService.remove(+id);
+  }
+
+  @Get(':id/pdf')
+  async generateTicket(@Param('id') id: string, @Res() res: express.Response) {
+    const pdfBuffer =
+      await this.ticketsService.createTicketPdfFromWordTemplate(+id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="ticket-${id}.pdf"`);
+    res.send(pdfBuffer);
   }
 }
