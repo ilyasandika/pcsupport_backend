@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToOne,
   OneToMany,
   PrimaryColumn,
   UpdateDateColumn,
@@ -9,6 +10,7 @@ import {
 import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
 import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
 import { Ticket } from '../../tickets/entities/ticket.entity';
+import { WorkLocation } from '../../work-locations/entities/work-location.entity';
 
 @Entity({
   name: 'employees',
@@ -53,6 +55,14 @@ export class Employee {
 
   @Column()
   department: string;
+
+  @Column({
+    nullable: true,
+  })
+  workLocationId: number;
+
+  @ManyToOne(() => WorkLocation, (workLocation) => workLocation.employees)
+  workLocation: WorkLocation;
 
   @Column()
   status?: boolean;
