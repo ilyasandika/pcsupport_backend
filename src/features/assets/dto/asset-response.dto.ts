@@ -8,6 +8,7 @@ import { AssetSupportResponseDto } from '../../asset_supports/dto/asset_support-
 import { AssetCategoryResponseDto } from '../../asset_categories/dto/asset_category-response.dto';
 import { ProjectResponseDto } from '../../projects/dto/project-response.dto';
 import { TicketResponseDtoForAsset } from '../../tickets/dto/ticket-response.dto';
+import { PickType } from '@nestjs/mapped-types';
 
 export class DetailAssetResponseDto {
   @Expose()
@@ -82,22 +83,17 @@ export class DetailAssetResponseDto {
   updatedAt: Date;
 }
 
-export class AssetResponseDto {
-  @Expose()
-  id: number;
-  @Expose()
-  serialNumber: string;
-  @Expose()
-  assetTag: string;
-  @Expose()
-  hostname: string;
-  @Expose()
-  brand: string;
-  @Expose()
-  model: string;
-  @Expose()
-  @Type(() => AssetCategoryResponseDto)
-  category: AssetCategoryResponseDto;
+export class AssetResponseDto extends PickType(DetailAssetResponseDto, [
+  'id',
+  'serialNumber',
+  'assetTag',
+  'hostname',
+  'brand',
+  'model',
+  'workLocation',
+  'project',
+  'category',
+] as const) {
   @Expose()
   @Type(() => AssetAssignmentResponseDto)
   assetAssignment: AssetAssignmentResponseDto;
