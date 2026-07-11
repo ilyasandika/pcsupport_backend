@@ -17,6 +17,15 @@ import { AssetAssignmentsService } from '../asset_assignments/asset_assignments.
 import { TrendRange } from '../../common/enums/common.enum';
 import { plainToInstance } from 'class-transformer';
 import { TicketResponseDto } from './dto/ticket-response.dto';
+import { TemplatesService } from '../templates/templates.service';
+import { TemplateType } from '../templates/entities/template.entity';
+import path from 'node:path';
+import * as fs from 'node:fs';
+import PizZip from 'pizzip';
+import Docxtemplater from 'docxtemplater';
+import libre from 'libreoffice-convert';
+import { promisify } from 'node:util';
+import { formatTicketDateTime } from '../../helper';
 
 @Injectable()
 export class TicketsService {
@@ -24,6 +33,7 @@ export class TicketsService {
     @InjectRepository(Ticket)
     private readonly ticketRepository: Repository<Ticket>,
     private readonly assetAssignmentService: AssetAssignmentsService,
+    private readonly templateService: TemplatesService,
   ) {}
 
   async create(dto: CreateTicketDto, creatorId: number) {
@@ -158,7 +168,7 @@ export class TicketsService {
       ? Mustache.render(template, {
           sequenceNumber: nextNumber,
         })
-      : `${new Date().getFullYear() % 100}-${nextNumber}`;
+      : `${nextNumber}`;
   }
 
   async findAll(): Promise<TicketResponseDto[]> {
@@ -221,6 +231,9 @@ export class TicketsService {
       relations: {
         asset: {
           category: true,
+          project: {
+            vendor: true,
+          },
           assetAssignments: {
             employee: true,
           },
@@ -374,5 +387,87 @@ export class TicketsService {
 
   remove(id: number) {
     return `This action removes a #${id} ticket`;
+  }
+
+  async createTicketPdfFromWordTemplate(ticketId: number) {
+    const ticket = await this.findOne(ticketId);
+    const template = await this.templateService.findByType(TemplateType.Ticket);
+    const absoluteTemplatePath = path.join(process.cwd(), template.filePath);
+    if (!fs.existsSync(absoluteTemplatePath)) {
+      throw new NotFoundException(
+        `File template not found at path: ${template.filePath}`,
+      );
+    }
+
+    try {
+      // 3. Baca template docx
+      const content = fs.readFileSync(absoluteTemplatePath, 'binary');
+      const zip = new PizZip(content);
+
+      const doc = new Docxtemplater(zip, {
+        paragraphLoop: true,
+        linebreaks: true,
+      });
+
+      doc.render({
+        ticketNumber: ticket.fullNumber || '-',
+        problem: ticket.problem || '-',
+        solution: ticket.solution || '-',
+
+        createdAtDate: ticket.createdAt
+          ? formatTicketDateTime(ticket.createdAt).date
+          : '-',
+        startAtDate: ticket.startAt
+          ? formatTicketDateTime(ticket.startAt).date
+          : '-',
+        solvedAtDate: ticket.solvedAt
+          ? formatTicketDateTime(ticket.solvedAt).date
+          : '-',
+
+        createdAtTime: ticket.createdAt
+          ? formatTicketDateTime(ticket.createdAt).time
+          : '-',
+        startAtTime: ticket.startAt
+          ? formatTicketDateTime(ticket.startAt).time
+          : '-',
+        solvedAtTime: ticket.solvedAt
+          ? formatTicketDateTime(ticket.solvedAt).time
+          : '-',
+
+        engineerName: ticket.engineer?.fullName || '-',
+
+        employeeName: ticket.employee?.name || '-',
+        employeeNik: ticket.employee?.nik || '-',
+        employeePosition: ticket.employee?.position || '-',
+        employeeDepartment: ticket.employee?.department || '-',
+
+        assetName: ticket.asset
+          ? `${ticket.asset?.brand} ${ticket.asset?.model}`
+          : '-',
+        assetTag: ticket.asset?.assetTag || '-',
+        assetCategory: ticket.asset?.category.name || '-',
+
+        vendorName: ticket.asset?.project?.vendor?.name || '-',
+        projectName: ticket.asset?.project?.name || '-',
+      });
+
+      const filledDocxBuffer = doc.getZip().generate({
+        type: 'nodebuffer',
+        compression: 'DEFLATE',
+      });
+
+      libre.convertAsync = promisify(libre.convert);
+      // 5. Konversi docx -> pdf
+      const pdfBuffer: Buffer = await libre.convertAsync(
+        filledDocxBuffer,
+        '.pdf',
+        undefined,
+      );
+      return pdfBuffer;
+    } catch {
+      throw new InternalServerErrorException(
+        "server is busy, please try again later",
+      );
+    }
   }
 }
