@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { promises as fs } from 'fs';
-import { Template } from './entities/template.entity';
+import { Template, TemplateType } from './entities/template.entity';
 import { CreateTemplateDto } from './dto/create-template.dto';
 
 @Injectable()
@@ -66,7 +66,21 @@ export class TemplatesService {
   async findOne(id: number): Promise<Template> {
     const template = await this.templateRepository.findOne({ where: { id } });
     if (!template) {
-      throw new NotFoundException(`Template dengan id ${id} tidak ditemukan`);
+      throw new NotFoundException(`Template with id ${id} not found`);
+    }
+    return template;
+  }
+
+  async findByType(type: TemplateType): Promise<Template> {
+    const template = await this.templateRepository.findOne({
+      where: {
+        type: type,
+      },
+    });
+    if (!template) {
+      throw new NotFoundException(
+        `Template with type ${type} not found`,
+      );
     }
     return template;
   }
