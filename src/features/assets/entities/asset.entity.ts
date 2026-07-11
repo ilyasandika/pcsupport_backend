@@ -48,11 +48,15 @@ export class Asset {
   @Column()
   model?: string;
 
-  @Column({
-    name: 'work_location_id',
-    select: false,
-  })
-  workLocationId: number;
+  // @Column({
+  //   name: 'work_location_id',
+  //   select: false,
+  // })
+  // workLocationId: number;
+  //
+  // @ManyToOne(() => WorkLocation, (workLocation) => workLocation.assets)
+  // @JoinColumn({ name: 'work_location_id' })
+  // workLocation: WorkLocation;
 
   @Column({
     name: 'warranty_date',
@@ -107,10 +111,6 @@ export class Asset {
   updatedAt: Date;
 
   //relations
-
-  @ManyToOne(() => WorkLocation, (workLocation) => workLocation.assets)
-  @JoinColumn({ name: 'work_location_id' })
-  workLocation: WorkLocation;
 
   @ManyToOne(() => Project, (project) => project.assets)
   @JoinColumn({ name: 'project_id' })

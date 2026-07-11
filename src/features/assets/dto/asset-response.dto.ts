@@ -1,5 +1,4 @@
 import { Expose, Type } from 'class-transformer';
-import { WorkLocationResponseDto } from '../../work-locations/dto/work-location-response.dto';
 import {
   AssetAssignmentResponseDto,
   DetailAssetAssignmentResponseDto,
@@ -57,9 +56,9 @@ export class DetailAssetResponseDto {
   @Expose()
   processor?: string;
 
-  @Expose()
-  @Type(() => WorkLocationResponseDto)
-  workLocation: WorkLocationResponseDto;
+  // @Expose()
+  // @Type(() => WorkLocationResponseDto)
+  // workLocation: WorkLocationResponseDto;
 
   @Expose()
   @Type(() => AssetSupportResponseDto)
@@ -90,7 +89,7 @@ export class AssetResponseDto extends PickType(DetailAssetResponseDto, [
   'hostname',
   'brand',
   'model',
-  'workLocation',
+  // 'workLocation',
   'project',
   'category',
 ] as const) {
