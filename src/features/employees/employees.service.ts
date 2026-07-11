@@ -74,7 +74,11 @@ export class EmployeesService {
   }
 
   async findAll(forList = false) {
-    const employees = await this.employeeRepository.find();
+    const employees = await this.employeeRepository.find({
+      relations: {
+        workLocation: true,
+      },
+    });
     if (forList) return plainToInstance(EmployeeResponseDto, employees);
     return plainToInstance(DetailEmployeeResponseDto, employees);
   }
