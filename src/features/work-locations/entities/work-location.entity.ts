@@ -8,6 +8,7 @@ import {
 import { Asset } from '../../assets/entities/asset.entity';
 import { Ticket } from '../../tickets/entities/ticket.entity';
 import { User } from '../../users/entities/user.entity';
+import { Employee } from '../../employees/entities/employee.entity';
 
 @Entity('work_locations')
 export class WorkLocation {
@@ -55,4 +56,7 @@ export class WorkLocation {
 
   @OneToMany(() => User, (user) => user.workLocation)
   users: User;
+
+  @OneToMany(() => Employee, (employee) => employee.workLocation)
+  employees: Employee[];
 }
