@@ -56,7 +56,6 @@ export class AssetsService {
   async findAll(forList = false) {
     const asset = await this.assetRepository.find({
       relations: {
-        workLocation: true,
         supports: true,
         category: true,
         project: {
@@ -92,7 +91,6 @@ export class AssetsService {
     const asset = await this.assetRepository.findOne({
       where: { serialNumber },
       relations: {
-        workLocation: true,
         supports: true,
         category: true,
         project: {
