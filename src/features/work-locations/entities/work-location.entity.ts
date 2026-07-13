@@ -47,9 +47,9 @@ export class WorkLocation {
   updatedAt: Date;
 
   //relation
-
-  @OneToMany(() => Asset, (asset) => asset.workLocation)
-  assets: Asset[];
+  //
+  // @OneToMany(() => Asset, (asset) => asset.workLocation)
+  // assets: Asset[];
 
   @OneToMany(() => Ticket, (ticket) => ticket.location)
   tickets: Ticket[];
