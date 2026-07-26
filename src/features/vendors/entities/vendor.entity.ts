@@ -1,13 +1,14 @@
 import {
   Column,
   CreateDateColumn,
-  Entity, OneToMany,
+  Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Asset } from '../../assets/entities/asset.entity';
 import { VendorSupportContact } from '../../vendor_support_contacts/entities/vendor_support_contact.entity';
 import { Project } from '../../projects/entities/project.entity';
+import { ExternalTicket } from '../../external_tickets/entities/external_ticket.entity';
 
 @Entity({
   name: 'vendors',
@@ -36,6 +37,9 @@ export class Vendor {
   )
   contacts: VendorSupportContact[];
 
-  @OneToMany(()=> Project, (project)=> project.vendor)
+  @OneToMany(() => ExternalTicket, (externalTicket) => externalTicket.vendor)
+  externalTickets: ExternalTicket[];
+
+  @OneToMany(() => Project, (project) => project.vendor)
   projects: Project[];
 }
