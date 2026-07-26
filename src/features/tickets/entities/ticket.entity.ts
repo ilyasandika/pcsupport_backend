@@ -3,7 +3,7 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
-  ManyToOne,
+  ManyToOne, OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -13,6 +13,7 @@ import { Employee } from '../../employees/entities/employee.entity';
 import { User } from '../../users/entities/user.entity';
 import { SlaPolicy } from '../../sla-policies/entities/sla-policy.entity';
 import { WorkLocation } from '../../work-locations/entities/work-location.entity';
+import { ExternalTicket } from '../../external_tickets/entities/external_ticket.entity';
 
 @Entity({
   name: 'tickets',
@@ -24,8 +25,9 @@ export class Ticket {
   @Column({
     name: 'sequence_number',
     unique: true,
+    nullable: true,
   })
-  sequenceNumber: number;
+  sequenceNumber?: number;
 
   @Column({
     name: 'full_number',
@@ -35,13 +37,13 @@ export class Ticket {
   fullNumber: string;
 
   @Column({
-    name: 'asset_sn',
+    name: 'asset_tag',
     nullable: true,
   })
-  assetSN?: string;
+  assetTag?: string;
 
   @ManyToOne(() => Asset, (asset) => asset.tickets)
-  @JoinColumn({ name: 'asset_sn' })
+  @JoinColumn({ name: 'asset_tag' })
   asset: Asset;
 
   @Column({
@@ -124,6 +126,12 @@ export class Ticket {
   })
   remarks?: string;
 
+  @Column({
+    nullable: true,
+    name: 'file_path',
+  })
+  filePath?: string;
+
   @CreateDateColumn({
     name: 'created_at',
   })
@@ -133,4 +141,7 @@ export class Ticket {
     name: 'updated_at',
   })
   updatedAt: Date;
+
+  @OneToOne(() => ExternalTicket, (externalTicket) => externalTicket.ticket)
+  externalTicket: ExternalTicket;
 }
