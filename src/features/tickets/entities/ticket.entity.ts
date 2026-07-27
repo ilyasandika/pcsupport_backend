@@ -103,7 +103,7 @@ export class Ticket {
     type: 'enum',
     enum: TicketStatus,
   })
-  status: TicketStatus;
+  status: string;
 
   @Column({
     nullable: true,
