@@ -8,6 +8,12 @@ import {
 } from 'typeorm';
 import { Ticket } from '../../tickets/entities/ticket.entity';
 
+enum Priority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+}
+
 @Entity('sla_policies')
 export class SlaPolicy {
   @PrimaryGeneratedColumn()
@@ -15,6 +21,13 @@ export class SlaPolicy {
 
   @Column({ type: 'varchar', length: 255 })
   name: string;
+
+  @Column({
+    type: 'enum',
+    default: Priority.LOW,
+    enum: Priority,
+  })
+  priority: string;
 
   @Column({ type: 'text', nullable: true })
   description: string;
