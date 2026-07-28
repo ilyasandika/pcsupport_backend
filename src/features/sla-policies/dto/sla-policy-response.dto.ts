@@ -8,6 +8,9 @@ export class SlaPolicyResponseDto {
   name: string;
 
   @Expose()
+  priority: string;
+
+  @Expose()
   description: string;
 
   @Expose()
