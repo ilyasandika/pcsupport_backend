@@ -1,51 +1,56 @@
-import { AssetCategory } from '../../../common/enums/asset-type.enum';
 import {
-  IsDateString,
   IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
+  ValidateNested,
 } from 'class-validator';
+import { AssetStatus, SupportType } from '../entities/asset.entity';
+import { Type } from 'class-transformer';
 
-export class CreateAssetDto {
+class SupportDetail {
+  @IsEnum(SupportType)
   @IsNotEmpty()
-  @IsString()
-  serialNumber: string;
+  type: SupportType;
 
+  @IsString()
+  @IsNotEmpty()
+  sn: string;
+}
+export class CreateAssetDto {
   @IsNotEmpty()
   @IsString()
   assetTag: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  hostname: string;
-
-  @IsNotEmpty()
-  @IsNumber()
-  category_id: number;
-
-  @IsNotEmpty()
-  @IsString()
-  brand: string;
+  serialNumber?: string;
 
   @IsOptional()
-  model?: string;
-
-  @IsNotEmpty()
-  @IsNumber()
-  workLocationId: number;
-
-  @IsNotEmpty()
   @IsString()
-  projectName?: string;
+  hostname?: string;
+
+  // @IsNotEmpty()
+  // @IsString()
+  // brand: string;
+  //
+  // @IsOptional()
+  // model?: string;
 
   @IsOptional()
-  @IsDateString()
+  @IsString()
+  type?: string;
+
+  @IsOptional()
+  @IsEnum(AssetStatus)
+  status: AssetStatus;
+
+  @IsOptional()
   warrantyDate?: Date;
 
   @IsOptional()
-  @IsDateString()
   purchaseDate?: Date;
 
   @IsOptional()
@@ -67,4 +72,26 @@ export class CreateAssetDto {
   @IsOptional()
   @IsString()
   processor?: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  categoryId: number;
+
+  @IsNotEmpty()
+  @IsString()
+  projectName: string;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested({ each: true })
+  @Type(() => SupportDetail)
+  support?: SupportDetail;
+
+  @IsOptional()
+  @IsNumber()
+  workLocationId?: number;
+
+  @IsOptional()
+  @IsString()
+  remarks?: string;
 }

@@ -5,4 +5,6 @@ export class AssetCategoryResponseDto {
   id: number;
   @Expose()
   name: string;
+  @Expose()
+  description?: string;
 }

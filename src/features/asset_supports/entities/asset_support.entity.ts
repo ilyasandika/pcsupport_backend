@@ -23,15 +23,16 @@ export class AssetSupport {
   serialNumber: string;
 
   @Column({
-    name: 'asset_sn',
+    name: 'asset_tag',
+    nullable: true,
   })
-  assetSn: string;
+  assetTag: string;
 
-  @ManyToOne(() => Asset, (asset) => asset.supports)
-  @JoinColumn({
-    name: 'asset_sn',
-  })
-  asset: Asset;
+  // @ManyToOne(() => Asset, (asset) => asset.supports)
+  // @JoinColumn({
+  //   name: 'asset_tag',
+  // })
+  // asset: Asset;
 
   @Column({
     nullable: true,
@@ -43,11 +44,13 @@ export class AssetSupport {
 
   @CreateDateColumn({
     name: 'created_at',
+    type: 'timestamptz',
   })
   createdAt: Date;
 
   @UpdateDateColumn({
     name: 'updated_at',
+    type: 'timestamptz',
   })
   updatedAt: Date;
 }

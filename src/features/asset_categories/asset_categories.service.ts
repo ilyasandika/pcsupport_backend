@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { AssetCategory } from './entities/asset_category.entity';
 import { CreateAssetCategoryDto } from './dto/create-asset_category.dto';
 import { UpdateAssetCategoryDto } from './dto/update-asset_category.dto';
+import { plainToInstance } from 'class-transformer';
+import { AssetCategoryResponseDto } from './dto/asset_category-response.dto';
 
 @Injectable()
 export class AssetCategoriesService {
@@ -18,25 +20,23 @@ export class AssetCategoriesService {
   }
 
   async getCount() {
-    const categories = await this.assetCategoryRepository.find({
-      relations: {
-        assets: true,
-      },
-      relationLoadStrategy: 'query',
-    });
+    const result = await this.assetCategoryRepository
+      .createQueryBuilder('category')
+      .leftJoin('category.assets', 'asset')
+      .select('category.name', 'label')
+      .addSelect('COUNT(asset.assetTag)', 'count')
+      .groupBy('category.id')
+      .getRawMany();
 
-    const formattedCategoryCount = categories.map((category) => {
-      return {
-        label: category.name,
-        count: category.assets ? category.assets.length : 0,
-      };
-    });
-
-    return formattedCategoryCount;
+    return result.map((item: { label: string; count: string }) => ({
+      label: item.label,
+      count: Number(item.count) || 0,
+    }));
   }
 
-  async findAll(): Promise<AssetCategory[]> {
-    return await this.assetCategoryRepository.find();
+  async findAll() {
+    const categories = await this.assetCategoryRepository.find();
+    return plainToInstance(AssetCategoryResponseDto, categories);
   }
 
   async findOne(id: number): Promise<AssetCategory> {

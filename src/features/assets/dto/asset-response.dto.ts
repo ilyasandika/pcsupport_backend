@@ -3,16 +3,15 @@ import {
   AssetAssignmentResponseDto,
   DetailAssetAssignmentResponseDto,
 } from '../../asset_assignments/dto/asset_assignment-response.dto';
-import { AssetSupportResponseDto } from '../../asset_supports/dto/asset_support-response.dto';
 import { AssetCategoryResponseDto } from '../../asset_categories/dto/asset_category-response.dto';
 import { ProjectResponseDto } from '../../projects/dto/project-response.dto';
 import { TicketResponseDtoForAsset } from '../../tickets/dto/ticket-response.dto';
 import { PickType } from '@nestjs/mapped-types';
+import { AssetStatus, type SupportDetail } from '../entities/asset.entity';
+
+import { DetailWorkLocationResponseDto } from '../../work-locations/dto/work-location-response.dto';
 
 export class DetailAssetResponseDto {
-  @Expose()
-  id: number;
-
   @Expose()
   serialNumber: string;
 
@@ -27,10 +26,14 @@ export class DetailAssetResponseDto {
   category: AssetCategoryResponseDto;
 
   @Expose()
-  brand: string;
+  @Type(() => DetailWorkLocationResponseDto)
+  workLocation?: DetailWorkLocationResponseDto;
 
   @Expose()
-  model?: string;
+  type?: string;
+
+  @Expose()
+  status: AssetStatus;
 
   @Expose()
   warrantyDate?: Date;
@@ -56,14 +59,6 @@ export class DetailAssetResponseDto {
   @Expose()
   processor?: string;
 
-  // @Expose()
-  // @Type(() => WorkLocationResponseDto)
-  // workLocation: WorkLocationResponseDto;
-
-  @Expose()
-  @Type(() => AssetSupportResponseDto)
-  supports: AssetSupportResponseDto[];
-
   @Expose()
   @Type(() => DetailAssetAssignmentResponseDto)
   assetAssignments: DetailAssetAssignmentResponseDto[];
@@ -73,8 +68,14 @@ export class DetailAssetResponseDto {
   project: ProjectResponseDto;
 
   @Expose()
+  support?: SupportDetail;
+
+  @Expose()
   @Type(() => TicketResponseDtoForAsset)
   tickets?: TicketResponseDtoForAsset[];
+
+  @Expose()
+  remarks?: string;
 
   @Expose()
   createdAt: Date;
@@ -83,17 +84,19 @@ export class DetailAssetResponseDto {
 }
 
 export class AssetResponseDto extends PickType(DetailAssetResponseDto, [
-  'id',
   'serialNumber',
   'assetTag',
   'hostname',
-  'brand',
-  'model',
-  // 'workLocation',
+  'type',
+  'status',
+  // 'brand',
+  // 'model',
+  'workLocation',
   'project',
+  'support',
   'category',
 ] as const) {
   @Expose()
   @Type(() => AssetAssignmentResponseDto)
-  assetAssignment: AssetAssignmentResponseDto;
+  assetAssignment?: AssetAssignmentResponseDto | null;
 }

@@ -1,6 +1,8 @@
 import { Expose, Type } from 'class-transformer';
 import { EmployeeResponseDto } from '../../employees/dto/employee-response.dto';
 import { AssetResponseDto } from '../../assets/dto/asset-response.dto';
+import { UserResponseDto } from '../../users/dto/user-response.dto';
+import { PickType } from '@nestjs/mapped-types';
 
 export class DetailAssetAssignmentResponseDto {
   @Expose()
@@ -15,19 +17,60 @@ export class DetailAssetAssignmentResponseDto {
   employee: EmployeeResponseDto;
 
   @Expose()
+  @Type(() => UserResponseDto)
+  createdBy: UserResponseDto;
+
+  @Expose()
   userNonEmployeeName?: string;
+
+  @Expose()
+  isBackup: boolean;
+
+  @Expose()
+  backupForAssetTag?: string;
+
+  @Expose()
+  isUnderMaintenance: boolean;
 
   @Expose()
   assignedAt: Date;
 
   @Expose()
+  @Type(() => UserResponseDto)
+  assignBy: UserResponseDto;
+
+  @Expose()
   returnedAt?: Date;
 
   @Expose()
-  remarks?: string;
+  assignRemarks?: string;
+
+  @Expose()
+  returnRemarks?: string;
+
+  @Expose()
+  legacyBastStatus?: string;
+
+  @Expose()
+  assignFilePath?: string;
+
+  @Expose()
+  contact: string;
+
+  @Expose()
+  returnFilePath?: string;
+
+  @Expose()
+  createdAt: Date;
+
+  @Expose()
+  updatedAt: Date;
 }
 
-export class AssetAssignmentResponseDto {
+export class AssetAssignmentResponseDto extends PickType(
+  DetailAssetAssignmentResponseDto,
+  ['userNonEmployeeName', 'assignedAt', 'employee'] as const,
+) {
   @Expose()
   userNonEmployeeName?: string;
   @Expose()

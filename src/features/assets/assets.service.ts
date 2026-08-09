@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -6,21 +7,36 @@ import {
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Asset } from './entities/asset.entity';
-import { Repository } from 'typeorm';
+import { Asset, AssetStatus, SupportDetail } from './entities/asset.entity';
+import { Brackets, EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
 import { plainToInstance } from 'class-transformer';
 import {
   AssetResponseDto,
   DetailAssetResponseDto,
 } from './dto/asset-response.dto';
+import { AssetQueryDto } from './dto/asset-query.dto';
+import * as XLSX from 'xlsx';
+import { RawAssetExcelRow } from '../../common/interfaces/raw-asset-excel.interface';
+import { AssetAssignment } from '../asset_assignments/entities/asset_assignment.entity';
+import { paginateQb } from '../../common/utils/paginate.util';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+
+import { AssetCategoriesService } from '../asset_categories/asset_categories.service';
+import { WorkLocationsService } from '../work-locations/work-locations.service';
 
 @Injectable()
 export class AssetsService {
   constructor(
     @InjectRepository(Asset)
     private readonly assetRepository: Repository<Asset>,
-  ) {}
+
+    @InjectRepository(AssetAssignment)
+    private readonly assetAssignmentRepository: Repository<AssetAssignment>,
+
+    private readonly assetCategoryService: AssetCategoriesService,
+    private readonly workLocationsService: WorkLocationsService,
+  ) { }
 
   async create(dto: CreateAssetDto) {
     const serialNumberExist = await this.assetRepository.findOneBy({
@@ -53,51 +69,227 @@ export class AssetsService {
     return await this.assetRepository.save(asset);
   }
 
-  async findAll(forList = false) {
-    const asset = await this.assetRepository.find({
-      relations: {
-        supports: true,
-        category: true,
-        project: {
-          vendor: true,
-        },
-        assetAssignments: {
-          employee: true,
-        },
-      },
-      order: {
-        assetAssignments: {
-          assignedAt: 'DESC',
-        },
-      },
-    });
+  async findAll(
+    query: AssetQueryDto,
+  ): Promise<PaginatedResponseDto<AssetResponseDto>> {
+    const qb = this.assetRepository
+      .createQueryBuilder('asset')
+      .leftJoinAndSelect('asset.category', 'category')
+      .leftJoinAndSelect('asset.workLocation', 'workLocation')
+      .leftJoinAndSelect('asset.project', 'project')
+      .leftJoinAndSelect('project.vendor', 'vendor');
 
-    const formattedAsset = asset.map((asset) => {
-      if (asset.assetAssignments.length > 0) {
-        const lastAssignment = asset.assetAssignments[0];
-        return {
-          ...asset,
-          assetAssignment: lastAssignment,
-        };
+    // --- search asset by tag or sn (combined) ---
+    if (query.asset) {
+      qb.andWhere(
+        new Brackets((subQb) => {
+          subQb
+            .where('asset.assetTag ILike :asset', { asset: `%${query.asset}%` })
+            .orWhere('asset.serialNumber ILike :asset', {
+              asset: `%${query.asset}%`,
+            });
+        }),
+      );
+    } else {
+      if (query.assetTag) {
+        qb.andWhere('asset.assetTag ILike :assetTag', {
+          assetTag: `%${query.assetTag}%`,
+        });
       }
-      return asset;
-    });
+      if (query.assetSn) {
+        qb.andWhere('asset.serialNumber ILike :assetSn', {
+          assetSn: `%${query.assetSn}%`,
+        });
+      }
+    }
 
-    if (forList) return plainToInstance(AssetResponseDto, formattedAsset);
-    return plainToInstance(DetailAssetResponseDto, formattedAsset);
+    if (query.hostname) {
+      qb.andWhere('asset.hostname ILike :hostname', {
+        hostname: `%${query.hostname}%`,
+      });
+    }
+
+    // --- search employee by name or nik (combined) ---
+    // pakai EXISTS subquery, BUKAN join, supaya asset tidak kegandaan
+    // (assetAssignments = one-to-many) dan pagination tetap akurat
+    if (query.employee) {
+      qb.andWhere(
+        `EXISTS (
+                SELECT 1
+                FROM asset_assignments aa
+                LEFT JOIN employees emp ON emp.nik = aa.pic_employee_nik
+                WHERE aa.asset_tag = asset.asset_tag
+                  AND aa.assigned_at = (
+                    SELECT MAX(aa2.assigned_at)
+                    FROM asset_assignments aa2
+                    WHERE aa2.asset_tag = asset.asset_tag
+                  )
+                  AND (
+                    emp.nik ILIKE :employee
+                    OR emp.name ILIKE :employee
+                    OR aa.user_non_employee_name ILIKE :employee
+                  )
+              )`,
+        { employee: `%${query.employee}%` },
+      );
+    } else {
+      if (query.employeeNik || query.employeeName) {
+        qb.andWhere(
+          `EXISTS (
+          SELECT 1 FROM asset_assignment aa
+          LEFT JOIN employee emp ON emp.id = aa."employeeId"
+          WHERE aa."assetTag" = asset."assetTag"
+            ${query.employeeNik ? 'AND emp.nik ILike :employeeNik' : ''}
+            ${query.employeeName ? 'AND emp.name ILike :employeeName' : ''}
+        )`,
+          {
+            ...(query.employeeNik && {
+              employeeNik: `%${query.employeeNik}%`,
+            }),
+            ...(query.employeeName && {
+              employeeName: `%${query.employeeName}%`,
+            }),
+          },
+        );
+      }
+    }
+
+    if (query.category && query.category.length > 0) {
+      qb.andWhere('category.name IN (:...category)', {
+        category: query.category,
+      });
+    }
+
+    if (query.type) {
+      qb.andWhere('asset.type ILike :type', { type: `%${query.type}%` });
+    }
+
+    // --- search vendor or project (combined) ---
+    if (query.vendorProject) {
+      qb.andWhere(
+        new Brackets((subQb) => {
+          subQb
+            .where('vendor.name ILike :vendorProject', {
+              vendorProject: `%${query.vendorProject}%`,
+            })
+            .orWhere('project.name ILike :vendorProject', {
+              vendorProject: `%${query.vendorProject}%`,
+            });
+        }),
+      );
+    } else {
+      if (query.vendor) {
+        qb.andWhere('vendor.name ILike :vendor', {
+          vendor: `%${query.vendor}%`,
+        });
+      }
+      if (query.project) {
+        qb.andWhere('project.name ILike :project', {
+          project: `%${query.project}%`,
+        });
+      }
+    }
+
+    if (query.status && query.status.length > 0) {
+      qb.andWhere('asset.status IN (:...status)', { status: query.status });
+    }
+
+    qb.addSelect(
+      `CASE asset.status
+        WHEN 'assigned' THEN 1
+        WHEN 'assigned for backup' THEN 2
+        WHEN 'undeployed' THEN 3
+        WHEN 'pending bast' THEN 4
+        WHEN 'ready stock' THEN 5
+        WHEN 'damaged' THEN 6
+        WHEN 'offline' THEN 7
+        WHEN 'returned' THEN 8
+        WHEN 'missing' THEN 9
+        WHEN 'backup' THEN 10
+        WHEN 'unknown' THEN 11
+        ELSE 12
+    END`,
+      'status_order'
+    );
+
+    qb.addOrderBy('status_order', 'ASC');
+
+
+    qb.addSelect(
+      `CASE WHEN asset.asset_tag ~ '^[0-9]+$' THEN 0 ELSE 1 END`,
+      'tag_is_number'
+    );
+
+    qb.addSelect(
+      `CASE WHEN asset.asset_tag ~ '^[0-9]+$' THEN CAST(asset.asset_tag AS BIGINT) ELSE NULL END`,
+      'tag_number_value'
+    );
+
+
+    qb.orderBy('status_order', 'ASC');
+    qb.addOrderBy('tag_is_number', 'ASC');
+    qb.addOrderBy('tag_number_value', 'ASC');
+    qb.addOrderBy('asset.assetTag', 'DESC');
+
+    const { data: assets, meta } = await paginateQb(qb, query);
+
+    if (assets.length === 0) {
+      return {
+        data: plainToInstance(AssetResponseDto, []),
+        meta,
+      };
+    }
+
+    const assetTags = assets.map((a) => a.assetTag);
+
+    const lastAssignments = await this.assetAssignmentRepository
+      .createQueryBuilder('assignment')
+      .distinctOn(['assignment.assetTag'])
+      .leftJoin('assignment.employee', 'employee')
+      .addSelect([
+        'employee.nik',
+        'employee.name',
+        'employee.position',
+        'employee.department',
+      ])
+      .where('assignment.assetTag IN (:...assetTags)', { assetTags })
+      .orderBy('assignment.assetTag', 'ASC')
+      .addOrderBy('assignment.assignedAt', 'DESC')
+      .getMany();
+
+    const lastAssignmentMap = new Map(
+      lastAssignments.map((aa) => [aa.assetTag, aa]),
+    );
+
+    const formattedAsset = assets.map((asset) => ({
+      ...asset,
+      assetAssignment: lastAssignmentMap.get(asset.assetTag) ?? null,
+    }));
+
+    return {
+      data: plainToInstance(AssetResponseDto, formattedAsset),
+      meta,
+    };
   }
 
-  async findOne(serialNumber: string) {
-    const asset = await this.assetRepository.findOne({
-      where: { serialNumber },
+  async findOne(
+    assetTag: string,
+    options?: FindOneOptions<Asset>,
+    externalManager?: EntityManager,
+  ) {
+    const baseOptions: FindOneOptions<Asset> = {
+      where: { assetTag },
       relations: {
-        supports: true,
+        // supports: true,
         category: true,
+        workLocation: true,
         project: {
           vendor: true,
         },
         assetAssignments: {
           employee: true,
+          assignBy: true,
+          createdBy: true,
         },
         tickets: {
           engineer: true,
@@ -111,21 +303,177 @@ export class AssetsService {
           createdAt: 'DESC',
         },
       },
-    });
+    };
+
+    const repository = externalManager
+      ? externalManager.getRepository(Asset)
+      : this.assetRepository;
+
+    const asset = await repository.findOne(options || baseOptions);
     if (!asset) throw new NotFoundException('asset not found');
     return plainToInstance(DetailAssetResponseDto, asset);
   }
 
-  async update(serialNumber: string, dto: UpdateAssetDto) {
-    const asset = await this.assetRepository.findOneBy({ serialNumber });
+  async update(
+    assetTag: string,
+    dto: UpdateAssetDto,
+    externalManager?: EntityManager,
+    isFromAssignment?: boolean,
+  ) {
+    const asset = await this.assetRepository.findOneBy({ assetTag });
     if (!asset) throw new NotFoundException('asset not found');
+    if (asset.status === AssetStatus.Assigned) {
+      if (
+        dto.status !== AssetStatus.Returned &&
+        dto.status !== AssetStatus.Missing &&
+        dto.status !== AssetStatus.Assigned
+      ) {
+        throw new BadRequestException(
+          ErrorDetailBuilder.buildOne(
+            'Asset is currently assigned. You can only update it to Returned or Missing.',
+            'status',
+          ),
+        );
+      }
+    }
+
+    const isStatusChanged = dto.status && dto.status !== asset.status;
+
+    if (isStatusChanged) {
+      if (
+        !isFromAssignment &&
+        (dto.status === AssetStatus.Assigned ||
+          dto.status === AssetStatus.Returned)
+      ) {
+        throw new BadRequestException(
+          ErrorDetailBuilder.buildOne(
+            'Cannot update asset status to Assigned or Returned, You can only update it from Asset Assignment',
+            'status',
+          ),
+        );
+      }
+    }
+    const executor = externalManager
+      ? externalManager.getRepository(Asset)
+      : this.assetRepository;
+
     this.assetRepository.merge(asset, dto);
-    return await this.assetRepository.save(asset);
+    return await executor.save(asset);
   }
 
-  async remove(serialNumber: string) {
-    const asset = await this.assetRepository.findOneBy({ serialNumber });
+  async remove(assetTag: string) {
+    const asset = await this.assetRepository.findOneBy({ assetTag });
     if (!asset) throw new NotFoundException('asset not found');
-    return await this.assetRepository.delete(serialNumber);
+    return await this.assetRepository.delete(assetTag);
+  }
+
+  async parseExcel(buffer: Buffer) {
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+
+    const records: any[] = XLSX.utils.sheet_to_json(worksheet, {
+      raw: false,
+      defval: '',
+    });
+
+    const categoryList = await this.assetCategoryService.findAll();
+    const workLocationList = await this.workLocationsService.findAll();
+
+    const mappedData: CreateAssetDto[] = records.map(
+      (row: RawAssetExcelRow) => {
+        const support: SupportDetail | undefined = row['support_sn']
+          ? ({
+            type: row['support_type'],
+            sn: row['support_sn'],
+            name: row['support_name'],
+          } as unknown as SupportDetail)
+          : undefined;
+
+        const categoryVal = row['category_id'] ?? row['category'];
+        let categoryId: number;
+
+        if (isNaN(Number(categoryVal))) {
+          const foundCategory = categoryList.find(
+            (cat) =>
+              cat.name.toLowerCase() ===
+              categoryVal?.toString().toLowerCase().trim(),
+          );
+          if (foundCategory) {
+            categoryId = foundCategory.id;
+          } else {
+            throw new NotFoundException(
+              `${categoryVal} not in asset category list`,
+            );
+          }
+        } else {
+          categoryId = Number(categoryVal);
+        }
+
+        const locationVal =
+          row['work_location_id'] ??
+          row['work_location'] ??
+          row['location_id'] ??
+          row['location'];
+        let workLocationId: number | undefined = undefined;
+
+        if (
+          locationVal !== undefined &&
+          locationVal !== null &&
+          locationVal !== ''
+        ) {
+          if (isNaN(Number(locationVal))) {
+            const foundLocation = workLocationList.find(
+              (loc) =>
+                loc.name.toLowerCase() ===
+                locationVal.toString().toLowerCase().trim(),
+            );
+            if (foundLocation) {
+              workLocationId = foundLocation.id;
+            } else {
+              throw new NotFoundException(
+                `${locationVal} not in work location list`,
+              );
+            }
+          } else {
+            workLocationId = Number(locationVal);
+          }
+        }
+
+        return {
+          assetTag: row['assettag'],
+          hostname: row['hostname'] ?? undefined,
+          serialNumber: row['sn']?.toString().trim() || undefined,
+          categoryId: categoryId,
+          workLocationId: workLocationId,
+          type: row['type'],
+          projectName: row['project'],
+          support: support,
+          status: row['status'],
+          purchaseDate: row['purchase_date']
+            ? new Date(row['purchase_date'])
+            : undefined,
+          warrantyDate: row['warranty_date']
+            ? new Date(row['warranty_date'])
+            : undefined,
+          storageType: row['storage_type'] ?? undefined,
+          storageCapacityByte: Number(row['storage_capacity_byte']),
+          memoryType: row['memory_type'] ?? undefined,
+          memoryCapacityByte: Number(row['memory_capacity_byte']),
+          processor: row['processor'],
+        };
+      },
+    );
+
+    return await this.bulkSaveUsers(mappedData);
+  }
+
+  private async bulkSaveUsers(dto: CreateAssetDto[]) {
+    return await this.assetRepository.upsert(dto, {
+      conflictPaths: ['assetTag'],
+      skipUpdateIfNoValuesChanged: true,
+      upsertType: 'on-conflict-do-update',
+    });
   }
 }

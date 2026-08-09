@@ -13,11 +13,11 @@ import { ErrorDetailBuilder } from '../../../common/utils/error-detail-builder';
 import { AssetAssignment } from '../entities/asset_assignment.entity';
 
 export class CreateAssetAssignmentDto {
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  assetSn: string;
+  assetTag: string;
 
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
   picEmployeeNik: string;
 
@@ -28,6 +28,22 @@ export class CreateAssetAssignmentDto {
   @IsDateString()
   @IsNotEmpty()
   assignedAt: Date;
+
+  @IsOptional()
+  @IsBoolean()
+  isBackup?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  assignById?: number;
+
+  @IsOptional()
+  @IsNumber()
+  createdById?: number;
+
+  @IsOptional()
+  @IsString()
+  contact?: string;
 
   @IsOptional()
   @IsDateString()
@@ -46,7 +62,16 @@ export class CreateAssetAssignmentDto {
 
   @IsOptional()
   @IsString()
-  remarks?: string;
+  assignRemarks?: string;
+
+  @IsOptional()
+  @IsString()
+  returnRemarks?: string;
+
+  @IsOptional()
+  @IsString()
+  legacyBastStatus?: string;
+
 
   @IsOptional()
   @IsBoolean()
@@ -61,5 +86,5 @@ export class CreateAssetAssignmentDto {
     }
     return true;
   })
-  isLegacyData: boolean;
+  isLegacyData?: boolean;
 }
