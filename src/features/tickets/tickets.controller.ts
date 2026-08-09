@@ -7,22 +7,29 @@ import {
   Param,
   Delete,
   UseGuards,
-  Logger,
   Query,
   Res,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipeBuilder,
+  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
-import * as jwtPayloadInterface from '../../common/interfaces/jwt-payload.interface';
+import { type JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { GetTicketTrendDto } from './dto/trend-ticket.dto';
-import { TicketResponseDto } from './dto/ticket-response.dto';
 import express from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { pdfMulterOptions } from '../../config/multer.config';
+import { CreateTicketPdfDto } from './dto/create-ticket-pdf.dto';
+import { TicketQueryDto } from './dto/ticket-query.dto';
 
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,32 +37,42 @@ export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
   @Post()
-  @Roles(Role.Helpdesk, Role.Admin)
+  @Roles(Role.Helpdesk, Role.Admin, Role.Engineer, Role.Supervisor)
   async create(
     @Body() dto: CreateTicketDto,
-    @GetUser() user: jwtPayloadInterface.JwtPayload,
+    @GetUser() user: JwtPayload,
   ) {
-    Logger.log(user);
     return await this.ticketsService.create(dto, user.sub as number);
   }
 
   @Patch('claim/:id')
-  @Roles(Role.Engineer, Role.Admin, Role.Helpdesk)
+  @Roles(Role.Engineer, Role.Admin)
   async claim(
     @Param('id') id: string,
-    @GetUser() user: jwtPayloadInterface.JwtPayload,
+    @GetUser() user: JwtPayload,
   ) {
     return await this.ticketsService.claimTicket(+id, user.sub as number);
   }
 
   @Get()
-  async findAll(): Promise<TicketResponseDto[]> {
-    return await this.ticketsService.findAll();
+  async findAll(
+    @Query() query: TicketQueryDto,
+    @GetUser() user: JwtPayload,
+  ) {
+    return await this.ticketsService.findAll(query, user);
+  }
+
+  @Get('dashboard')
+  async findPriority(
+    @Query() query: TicketQueryDto,
+    @GetUser() user: JwtPayload,
+  ) {
+    return await this.ticketsService.findAll(query, user, true);
   }
 
   @Get('/count/status')
-  getCountByStatus() {
-    return this.ticketsService.getCountByStatus();
+  getCountByStatus(@GetUser() user: JwtPayload) {
+    return this.ticketsService.getCountByStatus(user);
   }
 
   @Get('/trend/time')
@@ -64,8 +81,11 @@ export class TicketsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ticketsService.findOne(+id);
+  findOne(
+    @Param('id') id: string,
+    @GetUser() user: JwtPayload,
+  ) {
+    return this.ticketsService.findOne(+id, user);
   }
 
   @Patch(':id')
@@ -73,17 +93,75 @@ export class TicketsController {
     return this.ticketsService.update(+id, dto);
   }
 
-  @Delete(':id')
+  @Delete(':id/hard')
   remove(@Param('id') id: string) {
-    return this.ticketsService.remove(+id);
+    return this.ticketsService.hardRemove(+id);
   }
 
-  @Get(':id/pdf')
-  async generateTicket(@Param('id') id: string, @Res() res: express.Response) {
-    const pdfBuffer =
-      await this.ticketsService.createTicketPdfFromWordTemplate(+id);
+  @Post(':id/pdf')
+  async generateTicket(
+    @Param('id') id: string,
+    @Body() dto: CreateTicketPdfDto,
+    @Res() res: express.Response,
+  ) {
+    const pdfBuffer = await this.ticketsService.generatePdf(
+      +id,
+      dto,
+    );
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="ticket-${id}.pdf"`);
     res.send(pdfBuffer);
+  }
+
+  @Post(':id/upload')
+  @UseInterceptors(FileInterceptor('file', pdfMulterOptions))
+  async uploadPdf(
+    @Param('id') id: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: 'application/pdf',
+          skipMagicNumbersValidation: true,
+        })
+        .addMaxSizeValidator({ maxSize: 2 * 1024 * 1024 })
+        .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.ticketsService.uploadTicketPdf(+id, file);
+  }
+
+  @Get(':id/solved/pdf')
+  async viewTicket(@Param('id') id: string, @Res() res: express.Response) {
+    const fileStream = await this.ticketsService.getTicketStream(+id);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="ticket-${id}.pdf"`);
+    // res.send(fileStream);
+    fileStream.pipe(res);
+  }
+
+  @Post('import-excel')
+  @Roles(Role.Admin, Role.Helpdesk)
+  @UseInterceptors(FileInterceptor('file'))
+  async importExcel(
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType:
+            /^(text\/csv|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet)$/,
+          skipMagicNumbersValidation: true,
+        })
+        .addMaxSizeValidator({
+          maxSize: 10 * 1024 * 1024,
+        })
+        .build({
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        }),
+    )
+    file: Express.Multer.File,
+    @GetUser() user: JwtPayload,
+  ) {
+    return await this.ticketsService.importExcel(file.buffer, user.sub as number);
   }
 }

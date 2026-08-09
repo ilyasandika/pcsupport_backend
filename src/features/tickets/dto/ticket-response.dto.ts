@@ -6,6 +6,7 @@ import { UserResponseDto } from '../../users/dto/user-response.dto';
 import { EmployeeResponseDto } from '../../employees/dto/employee-response.dto';
 import { AssetResponseDto } from '../../assets/dto/asset-response.dto';
 import { OmitType } from '@nestjs/mapped-types';
+import type { TicketSnapshot } from '../interfaces/ticket-snapshot.interface';
 
 export class TicketResponseDto {
   @Expose()
@@ -39,6 +40,9 @@ export class TicketResponseDto {
   location: WorkLocationResponseDto;
 
   @Expose()
+  snapshot?: TicketSnapshot;
+
+  @Expose()
   problem: string;
 
   @Expose()
@@ -46,6 +50,9 @@ export class TicketResponseDto {
 
   @Expose()
   solution?: string;
+
+  @Expose()
+  contact?: string;
 
   @Expose()
   startAt: string;
@@ -57,6 +64,9 @@ export class TicketResponseDto {
   remarks?: string;
 
   @Expose()
+  filePath?: string;
+
+  @Expose()
   createdAt: Date;
 }
 
@@ -66,5 +76,9 @@ export class TicketResponseDtoForAsset extends OmitType(TicketResponseDto, [
   'asset',
   'location',
   'remarks',
+  'filePath',
   'createdBy',
-] as const) {}
+  'contact',
+  'createdAt',
+  'snapshot',
+] as const) { }

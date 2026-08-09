@@ -1,6 +1,9 @@
 import {
   BadRequestException,
+  ForbiddenException,
+  forwardRef,
   HttpException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -10,7 +13,15 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Ticket } from './entities/ticket.entity';
-import { Between, EntityManager, Repository } from 'typeorm';
+import {
+  Between,
+  Brackets,
+  DataSource,
+  EntityManager,
+  IsNull,
+  Not,
+  Repository,
+} from 'typeorm';
 import Mustache from 'mustache';
 import { TicketStatus } from '../../common/enums/ticket-status.enum';
 import { AssetAssignmentsService } from '../asset_assignments/asset_assignments.service';
@@ -21,98 +32,135 @@ import { TemplatesService } from '../templates/templates.service';
 import { TemplateType } from '../templates/entities/template.entity';
 import path from 'node:path';
 import * as fs from 'node:fs';
-import PizZip from 'pizzip';
-import Docxtemplater from 'docxtemplater';
+import { createReadStream, existsSync, ReadStream } from 'node:fs';
 import libre from 'libreoffice-convert';
 import { promisify } from 'node:util';
-import { formatTicketDateTime } from '../../helper';
+import { formatTicketDateTime, getSignatureBuffer } from '../../helper';
+import { join } from 'path';
+import { UsersService } from '../users/users.service';
+import createReport from 'docx-templates';
+import { CreateTicketPdfDto } from './dto/create-ticket-pdf.dto';
+import { TicketQueryDto } from './dto/ticket-query.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { paginateQb } from '../../common/utils/paginate.util';
+import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
+import { Role } from '../../common/enums/role.enum';
+import { SlaPoliciesService } from '../sla-policies/sla-policies.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AssetsService } from '../assets/assets.service';
+import { AssetStatus } from '../assets/entities/asset.entity';
+import { Employee } from '../employees/entities/employee.entity';
+import { TicketSnapshot } from './interfaces/ticket-snapshot.interface';
+import * as XLSX from 'xlsx';
+import { WorkLocationsService } from '../work-locations/work-locations.service';
+import { RawTicketExcelRow } from '../../common/interfaces/raw-ticket-excel.interface';
+import { raw } from 'express';
 
 @Injectable()
 export class TicketsService {
   constructor(
     @InjectRepository(Ticket)
     private readonly ticketRepository: Repository<Ticket>,
-    private readonly assetAssignmentService: AssetAssignmentsService,
     private readonly templateService: TemplatesService,
-  ) {}
+    private readonly userService: UsersService,
+    private readonly assetService: AssetsService,
+    private readonly slaPolicyService: SlaPoliciesService,
+    private readonly workLocationsService: WorkLocationsService,
+    @Inject(forwardRef(() => AssetAssignmentsService))
+    private readonly assetAssignmentService: AssetAssignmentsService,
+    private dataSource: DataSource,
+  ) { }
 
-  async create(dto: CreateTicketDto, creatorId: number) {
+  async create(
+    dto: CreateTicketDto,
+    creatorId: number,
+    externalManager?: EntityManager,
+  ) {
+    const executeOperation = async (manager: EntityManager) => {
+      let userNonEmployeeName: string | undefined = undefined;
+
+      if (dto.assetTag && externalManager == undefined) {
+        const assetAssignment =
+          await this.assetAssignmentService.findLatestByAssetTag(
+            dto.assetTag,
+            manager,
+          );
+        if (!assetAssignment) {
+          throw new BadRequestException(
+            'This is a new asset, please assign the asset first.',
+          );
+        }
+        if (
+          assetAssignment.picEmployeeNik !== dto.employeeNik ||
+          assetAssignment.returnedAt
+        ) {
+          throw new BadRequestException(
+            'The specified asset does not belong to this employee or has been returned.',
+          );
+        }
+        userNonEmployeeName = assetAssignment.userNonEmployeeName;
+      }
+
+      let nextNumber: number | undefined = undefined;
+      let fullNumber: string | undefined = undefined;
+
+      if (dto.engineerId) {
+        const latestTicket = await manager.findOne(Ticket, {
+          where: { sequenceNumber: Not(IsNull()) },
+          order: { sequenceNumber: 'DESC' },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        nextNumber = (latestTicket?.sequenceNumber ?? 0) + 1;
+        fullNumber = this.getFullNumber(nextNumber, dto.fullNumberTemplate);
+      }
+
+      const slaPolicyDefault = await this.slaPolicyService.findDefault();
+      const ticketStatus = dto.status
+        ? dto.status
+        : dto.engineerId
+          ? TicketStatus.InProgress
+          : TicketStatus.Open;
+
+      const employee = await manager.findOne(Employee, {
+        where: { nik: dto.employeeNik },
+      });
+
+      const snapshot: TicketSnapshot = {
+        position: employee?.position,
+        department: employee?.department,
+        division: employee?.division,
+        userNonEmployee: dto.userNonEmployeeName ?? userNonEmployeeName,
+      };
+
+      const newTicket = manager.create(Ticket, {
+        ...dto,
+        sequenceNumber: dto.engineerId ? nextNumber : undefined,
+        slaPolicyId: dto.slaPolicyId ?? slaPolicyDefault.id,
+        engineerId: dto.engineerId ?? undefined,
+        createdByUserId: creatorId,
+        snapshot,
+        contact: dto.contact,
+        status: ticketStatus,
+        startAt: dto.engineerId ? new Date() : undefined,
+        fullNumber,
+      });
+
+      return await manager.save(Ticket, newTicket);
+    };
+
     try {
-      return await this.ticketRepository.manager.transaction(
-        async (manager) => {
-          if (dto.assetSn) {
-            const assetAssignment =
-              await this.assetAssignmentService.findLatestByAssetSn(
-                dto.assetSn,
-                manager,
-              );
-
-            if (assetAssignment) {
-              //dto employee id tidak sesuai dengan data kepemilikan asset dan belum dikembalikan
-              if (
-                dto.employeeNik &&
-                assetAssignment.picEmployeeNik != dto.employeeNik &&
-                !assetAssignment.returnedAt
-              ) {
-                throw new BadRequestException(
-                  'the specified asset does not belong to this employee',
-                );
-              }
-
-              //dto employee ada, asset sudah dikembalikan.
-              if (dto.employeeNik && assetAssignment.returnedAt) {
-                throw new BadRequestException(
-                  'the specified asset has returned, employee id should empty',
-                );
-              }
-
-              //dto employee id kosong dan asset belum dikembalikan.
-              if (dto.employeeNik == undefined && !assetAssignment.returnedAt) {
-                throw new BadRequestException('this asset still have an owner');
-              }
-            } else {
-              if (dto.employeeNik) {
-                throw new BadRequestException(
-                  'this is new asset, please assign the asset first',
-                );
-              }
-            }
-          }
-
-          const latestTicket = await manager.findOne(Ticket, {
-            where: {},
-            order: { sequenceNumber: 'DESC' },
-            lock: { mode: 'pessimistic_write' },
-          });
-          const nextNumber: number = latestTicket
-            ? latestTicket.sequenceNumber + 1
-            : 1;
-
-          const fullNumber = dto.engineerId
-            ? await this.getFullNumber(manager, dto.fullNumberTemplate)
-            : undefined;
-
-          const newTicket = manager.create(Ticket, {
-            ...dto,
-            sequenceNumber: nextNumber,
-            engineerId: dto.engineerId ?? undefined,
-            createdByUserId: creatorId,
-            status: dto.engineerId
-              ? TicketStatus.InProgress
-              : TicketStatus.Open,
-            startAt: dto.engineerId ? new Date() : undefined,
-            fullNumber,
-          });
-
-          const savedTicket = manager.create(Ticket, newTicket);
-          return await manager.save(Ticket, savedTicket);
-        },
-      );
+      if (externalManager) {
+        return await executeOperation(externalManager);
+      } else {
+        return await this.ticketRepository.manager.transaction(
+          executeOperation,
+        );
+      }
     } catch (e) {
       if (e instanceof HttpException) {
         throw e;
       }
-      Logger.error(e);
       throw new InternalServerErrorException('server is busy');
     }
   }
@@ -123,7 +171,6 @@ export class TicketsService {
         async (manager) => {
           const ticket = await manager.findOne(Ticket, {
             where: { id },
-            order: { sequenceNumber: 'DESC' },
             lock: { mode: 'pessimistic_write' },
           });
 
@@ -132,7 +179,16 @@ export class TicketsService {
               'ticket has been claimed by another engineer',
             );
 
-          const fullNumber = await this.getFullNumber(manager);
+          const latestTicket = await manager.findOne(Ticket, {
+            where: {
+              sequenceNumber: Not(IsNull()),
+            },
+            order: { sequenceNumber: 'DESC' },
+            lock: { mode: 'pessimistic_write' },
+          });
+          const nextNumber: number = (latestTicket?.sequenceNumber ?? 0) + 1;
+
+          const fullNumber = this.getFullNumber(nextNumber);
 
           if (!ticket) throw new NotFoundException('ticket not found');
 
@@ -140,6 +196,7 @@ export class TicketsService {
           ticket.startAt = new Date();
           ticket.status = TicketStatus.InProgress;
           ticket.fullNumber = fullNumber;
+          ticket.sequenceNumber = nextNumber;
 
           const updatedTicket = manager.create(Ticket, ticket);
           return await manager.save(Ticket, updatedTicket);
@@ -150,82 +207,203 @@ export class TicketsService {
     }
   }
 
-  private async getFullNumber(
-    manager: EntityManager,
-    template?: string,
-  ): Promise<string> {
-    const latestTicket = await manager.findOne(Ticket, {
-      where: {},
-      order: { sequenceNumber: 'DESC' },
-      lock: { mode: 'pessimistic_write' },
-    });
-
-    const nextNumber: number = latestTicket
-      ? latestTicket.sequenceNumber + 1
-      : 1;
-
+  private getFullNumber(nextNumber: number, template?: string): string {
     return template
       ? Mustache.render(template, {
-          sequenceNumber: nextNumber,
-        })
+        sequenceNumber: nextNumber,
+      })
       : `${nextNumber}`;
   }
 
-  async findAll(): Promise<TicketResponseDto[]> {
-    const tickets = await this.ticketRepository.find({
-      relations: {
-        asset: {
-          category: true,
-          assetAssignments: {
-            employee: true,
-          },
-        },
-        createdBy: true,
-        engineer: true,
-        employee: true,
-        location: true,
-        slaPolicy: true,
-      },
-      order: {
-        createdAt: 'DESC',
-        asset: {
-          assetAssignments: {
-            assignedAt: 'DESC',
-          },
-        },
-      },
-    });
+  async findAll(
+    query: TicketQueryDto,
+    user: JwtPayload,
+    forDashboard: boolean = false,
+  ): Promise<PaginatedResponseDto<TicketResponseDto>> {
+    Logger.log(query.employee, "TEST");
+    const qb = this.ticketRepository
+      .createQueryBuilder('ticket')
+      .leftJoinAndSelect('ticket.asset', 'asset')
+      .leftJoinAndSelect('asset.category', 'category')
+      .leftJoinAndSelect('asset.assetAssignments', 'assetAssignments')
+      .leftJoinAndSelect('assetAssignments.employee', 'assignmentEmployee')
+      .leftJoinAndSelect('ticket.createdBy', 'createdBy')
+      .leftJoinAndSelect('ticket.engineer', 'engineer')
+      .leftJoinAndSelect('ticket.employee', 'employee')
+      .leftJoinAndSelect('employee.workLocation', 'workLocation')
+      .leftJoinAndSelect('ticket.location', 'location')
+      .leftJoinAndSelect('ticket.slaPolicy', 'slaPolicy')
+      .withDeleted();
 
-    const formattedTicket = tickets.map((ticket) => {
-      if (
-        ticket.asset &&
-        ticket.asset.assetAssignments &&
-        ticket.asset.assetAssignments.length > 0
-      ) {
-        const lastAssigment = ticket.asset.assetAssignments.find(
-          (value) => value.picEmployeeNik == ticket.employeeNik,
-        );
-        const user = {
-          name: ticket.employee?.name,
-          nik: ticket.employee?.nik,
-          userNonEmployeeName: lastAssigment?.userNonEmployeeName,
-        };
-        return {
-          ...ticket,
-          asset: {
-            ...ticket.asset,
-            assetAssignment: user,
-          },
-        };
+    if (query.asset) {
+      qb.andWhere(
+        new Brackets((subQb) => {
+          subQb
+            .where('ticket.assetTag ILike :asset', {
+              asset: `%${query.asset}%`,
+            })
+            .orWhere('asset.serialNumber ILike :asset', {
+              asset: `%${query.asset}%`,
+            });
+        }),
+      );
+    } else {
+      if (query.assetTag) {
+        qb.andWhere('asset.assetTag ILike :assetTag', {
+          assetTag: `%${query.assetTag}%`,
+        });
       }
-      return {
-        ...ticket,
-      };
-    });
-    return plainToInstance(TicketResponseDto, formattedTicket);
+      if (query.assetSn) {
+        qb.andWhere('asset.serialNumber ILike :assetSn', {
+          assetSn: `%${query.assetSn}%`,
+        });
+      }
+    }
+
+    if (query.employee) {
+      qb.andWhere(
+        new Brackets((subQb) => {
+          subQb
+            .where('ticket.employeeNik ILike :employee', {
+              employee: `%${query.employee}%`,
+            })
+            .orWhere('employee.name ILike :employee', {
+              employee: `%${query.employee}%`,
+            })
+            .orWhere('CAST(ticket.snapshot AS text) ILike :employee', {
+              employee: `%${query.employee}%`,
+            });
+        }),
+      );
+    } else {
+      if (query.employeeNik) {
+        qb.andWhere('ticket.employeeNik ILike :employeeNik', {
+          employeeNik: `%${query.employeeNik}%`,
+        });
+      }
+      if (query.employeeName) {
+        qb.andWhere('employee.name ILike :employeeName', {
+          employeeName: `%${query.employeeName}%`,
+        });
+      }
+    }
+    if (query.engineerName) {
+      qb.andWhere('engineer.fullName ILike :engineerName', {
+        engineerName: `%${query.engineerName}%`,
+      });
+    }
+    if (query.createdByName) {
+      qb.andWhere('createdBy.fullName ILike :createdByName', {
+        createdByName: `%${query.createdByName}%`,
+      });
+    }
+
+    if (query.ticketNumber) {
+      qb.andWhere('ticket.fullNumber ILike :ticketNumber', {
+        ticketNumber: `%${query.ticketNumber}%`,
+      });
+    }
+    if (query.location) {
+      qb.andWhere('location.name ILike :location', {
+        location: `%${query.location}%`,
+      });
+    }
+    if (query.locationId !== undefined && query.locationId !== null) {
+      const locationIds = Array.isArray(query.locationId)
+        ? query.locationId.map(Number)
+        : [Number(query.locationId)];
+      const validLocationIds = locationIds.filter((id) => !isNaN(id));
+      if (validLocationIds.length > 0) {
+        qb.andWhere('ticket.locationId IN (:...locationIds)', {
+          locationIds: validLocationIds,
+        });
+      }
+    }
+    if (query.problem) {
+      qb.andWhere('ticket.problem ILike :problem', {
+        problem: `%${query.problem}%`,
+      });
+    }
+    if (query.solution) {
+      qb.andWhere('ticket.solution ILike :solution', {
+        solution: `%${query.solution}%`,
+      });
+    }
+    if (query.startAt) {
+      const dateStr = query.startAt.split('T')[0];
+      qb.andWhere('DATE(ticket.startAt) = :startAtDate', {
+        startAtDate: dateStr,
+      });
+    }
+    if (query.solvedAt) {
+      const dateStr = query.solvedAt.split('T')[0];
+      qb.andWhere('DATE(ticket.solvedAt) = :solvedAtDate', {
+        solvedAtDate: dateStr,
+      });
+    }
+    if (query.status) {
+      const statuses = Array.isArray(query.status)
+        ? query.status
+        : [query.status];
+      qb.andWhere('ticket.status IN (:...status)', {
+        status: statuses,
+      });
+    }
+
+    qb.addSelect(
+      `CASE
+          WHEN "slaPolicy"."priority" = 'high' THEN 1
+          WHEN "slaPolicy"."priority" = 'medium' THEN 2
+          WHEN "slaPolicy"."priority" = 'low' THEN 3
+          ELSE 4
+        END`,
+      'priority_label',
+    );
+
+    if (user.role === Role.Engineer) {
+      qb.andWhere(
+        new Brackets((qbSub) => {
+          qbSub
+            .where('ticket.engineerId = :engineerId', { engineerId: user.sub })
+            .orWhere('ticket.engineerId IS NULL');
+        }),
+      );
+    }
+
+    if (forDashboard) {
+      qb.addSelect(
+        `CASE
+            WHEN ticket.status = 'open' THEN 1
+            WHEN ticket.status = 'in progress' THEN 2
+            ELSE 3
+          END`,
+        'status_label',
+      );
+      qb.addOrderBy('status_label', 'ASC');
+      qb.addOrderBy('priority_label', 'ASC');
+    } else {
+      qb.addSelect(
+        `CASE
+            WHEN ticket.status = 'open' THEN 1
+            ELSE 2
+          END`,
+        'status_label',
+      );
+      qb.addOrderBy('status_label', 'ASC');
+    }
+
+    qb.addSelect("CAST(REGEXP_REPLACE(ticket.fullNumber, '[[:alpha:]]', '', 'g') AS INTEGER)", 'extracted_number');
+    qb.addOrderBy('extracted_number', 'DESC');
+    qb.addOrderBy('ticket.createdAt', 'DESC');
+    const { data: tickets, meta } = await paginateQb(qb, query);
+
+    return {
+      data: plainToInstance(TicketResponseDto, tickets),
+      meta,
+    };
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, user?: JwtPayload) {
     const ticket = await this.ticketRepository.findOne({
       where: { id },
       relations: {
@@ -240,55 +418,93 @@ export class TicketsService {
         },
         createdBy: true,
         engineer: true,
-        employee: true,
+        employee: {
+          workLocation: true,
+        },
         location: true,
         slaPolicy: true,
       },
-      order: {
-        createdAt: 'DESC',
-        asset: {
-          assetAssignments: {
-            assignedAt: 'DESC',
-          },
-        },
-      },
+      withDeleted: true,
     });
     if (!ticket) throw new NotFoundException('ticket not found');
-    let formattedTicket;
     if (
-      ticket &&
-      ticket.asset &&
-      ticket.asset.assetAssignments &&
-      ticket.asset.assetAssignments.length > 0
+      user &&
+      user.role === Role.Engineer &&
+      ticket.engineerId !== null &&
+      ticket.engineerId !== user.sub
     ) {
-      const lastAssigment = ticket.asset.assetAssignments.find(
-        (value) => value.picEmployeeNik == ticket.employeeNik,
-      );
-      const user = {
-        name: ticket.employee?.name,
-        nik: ticket.employee?.nik,
-        userNonEmployeeName: lastAssigment?.userNonEmployeeName,
-      };
-      formattedTicket = {
-        ...ticket,
-        asset: {
-          ...ticket.asset,
-          assetAssignment: user,
-        },
-      };
-    } else {
-      formattedTicket = {
-        ...ticket,
-      };
+      throw new ForbiddenException('you cant access this resource');
     }
-    return plainToInstance(TicketResponseDto, formattedTicket);
+    return plainToInstance(TicketResponseDto, ticket);
   }
 
   async update(id: number, dto: UpdateTicketDto) {
     const ticket = await this.ticketRepository.findOneBy({ id });
     if (!ticket) throw new NotFoundException('ticket not found');
+
+    if (dto.status === TicketStatus.Cancelled) {
+      dto.solvedAt = new Date();
+    }
+
     this.ticketRepository.merge(ticket, dto);
-    return await this.ticketRepository.save(ticket);
+
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        Logger.log('start transaction');
+        if (dto.backupAssetTag && ticket.assetTag && ticket.engineerId) {
+          // Logger.log('start update backup asset status to assign for backup ');
+          // await this.assetService.update(
+          //   dto.backupAssetTag,
+          //   {
+          //     status: AssetStatus.AssignedForBackup,
+          //   },
+          //   manager,
+          // );
+          // Logger.log('done update backup asset status to assign for backup ');
+
+          Logger.log('start create backup asset assignment for backup ');
+          await this.assetAssignmentService.create(
+            {
+              assetTag: dto.backupAssetTag,
+              picEmployeeNik: ticket.employeeNik,
+              userNonEmployeeName: ticket.snapshot?.userNonEmployee,
+              assignedAt: new Date(),
+              assignById: ticket.engineerId,
+              isBackup: true,
+              contact: ticket.contact,
+              assignRemarks: `Backup for ${ticket.assetTag}`,
+            },
+            ticket.createdByUserId,
+            manager,
+          );
+          Logger.log('done create asset assignment for backup ');
+
+
+          Logger.log('start find latest assignment for backup ');
+          const assignment =
+            await this.assetAssignmentService.findLatestByAssetTag(
+              ticket.assetTag,
+              manager,
+            );
+
+          Logger.log('done find latest assignment for backup ');
+
+          Logger.log('start update asset to under maintenance ');
+          await this.assetAssignmentService.update(
+            assignment.id,
+            { isUnderMaintenance: true },
+            manager,
+          );
+          Logger.log('done update asset to under maintenance ');
+        }
+        return await manager.save(Ticket, ticket);
+      });
+    } catch (e) {
+      if (e instanceof HttpException) {
+        throw e;
+      }
+      throw new InternalServerErrorException('server is busy');
+    }
   }
 
   async getTicketTrend(range: TrendRange = TrendRange.MONTH) {
@@ -337,60 +553,86 @@ export class TicketsService {
       trendMap.set(label, currentCount + 1);
     });
 
-    // Convert Map kembali menjadi Array of Objects standar untuk Frontend
     return Array.from(trendMap.entries()).map(([label, count]) => ({
       label,
       count,
     }));
   }
 
-  async getCountByStatus() {
-    const [
-      total,
-      open,
-      pending,
-      inProgress,
-      closedRemote,
-      closedVisit,
-      closedOnsite,
-      resolved,
-    ] = await Promise.all([
-      this.ticketRepository.count(),
-      this.ticketRepository.count({ where: { status: TicketStatus.Open } }),
-      this.ticketRepository.count({ where: { status: TicketStatus.Pending } }),
-      this.ticketRepository.count({
-        where: { status: TicketStatus.InProgress },
-      }),
-      this.ticketRepository.count({
-        where: { status: TicketStatus.ClosedRemote },
-      }),
-      this.ticketRepository.count({
-        where: { status: TicketStatus.ClosedVisit },
-      }),
-      this.ticketRepository.count({
-        where: { status: TicketStatus.ClosedOnsite },
-      }),
-      this.ticketRepository.count({ where: { status: TicketStatus.Resolved } }),
-    ]);
+  async getCountByStatus(user: JwtPayload) {
+    const query = this.ticketRepository.createQueryBuilder('ticket');
 
-    return {
-      total,
-      open,
-      pending,
-      inProgress,
-      closedRemote,
-      closedVisit,
-      closedOnsite,
-      resolved,
+    if (user.role === Role.Engineer) {
+      query.where('ticket.engineerId = :engineerId', { engineerId: user.sub });
+    }
+
+    const rawResults: { count: string; status: TicketStatus }[] = await query
+      .select('ticket.status', 'status')
+      .addSelect('COUNT(ticket.id)', 'count')
+      .groupBy('ticket.status')
+      .getRawMany();
+
+    const counts = {
+      total: 0,
+      open: 0,
+      pending: 0,
+      inProgress: 0,
+      closedRemote: 0,
+      closedVisit: 0,
+      closedOnsite: 0,
+      resolved: 0,
+      cancelled: 0,
     };
+
+    rawResults.forEach((row) => {
+      const count = parseInt(row.count, 10);
+
+      counts.total += count;
+
+      switch (row.status) {
+        case TicketStatus.Open:
+          counts.open = count;
+          break;
+        case TicketStatus.Pending:
+          counts.pending = count;
+          break;
+        case TicketStatus.InProgress:
+          counts.inProgress = count;
+          break;
+        case TicketStatus.ClosedRemote:
+          counts.closedRemote = count;
+          break;
+        case TicketStatus.ClosedVisit:
+          counts.closedVisit = count;
+          break;
+        case TicketStatus.ClosedOnsite:
+          counts.closedOnsite = count;
+          break;
+        case TicketStatus.Resolved:
+          counts.resolved = count;
+          break;
+        case TicketStatus.Cancelled:
+          counts.cancelled = count;
+          break;
+      }
+    });
+
+    return counts;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} ticket`;
+  async hardRemove(id: number) {
+    const ticket = await this.ticketRepository.findOneBy({ id });
+    if (!ticket) throw new NotFoundException('ticket not found');
+    return await this.ticketRepository.remove(ticket);
   }
 
-  async createTicketPdfFromWordTemplate(ticketId: number) {
+  async generatePdf(ticketId: number, dto: CreateTicketPdfDto) {
     const ticket = await this.findOne(ticketId);
+    const supervisor = await this.userService.findOne(dto.supervisorId);
+    const engineer = ticket.engineer?.id
+      ? await this.userService.findOne(ticket.engineer?.id)
+      : undefined;
+
     const template = await this.templateService.findByType(TemplateType.Ticket);
     const absoluteTemplatePath = path.join(process.cwd(), template.filePath);
     if (!fs.existsSync(absoluteTemplatePath)) {
@@ -400,19 +642,15 @@ export class TicketsService {
     }
 
     try {
-      // 3. Baca template docx
-      const content = fs.readFileSync(absoluteTemplatePath, 'binary');
-      const zip = new PizZip(content);
+      const templateBuffer = fs.readFileSync(absoluteTemplatePath);
+      const spvSignatureBuffer = getSignatureBuffer(supervisor.signaturePath);
+      const engSignatureBuffer = getSignatureBuffer(engineer?.signaturePath);
 
-      const doc = new Docxtemplater(zip, {
-        paragraphLoop: true,
-        linebreaks: true,
-      });
-
-      doc.render({
+      const data = {
         ticketNumber: ticket.fullNumber || '-',
         problem: ticket.problem || '-',
         solution: ticket.solution || '-',
+        phoneNumber: ticket.contact || '-',
 
         createdAtDate: ticket.createdAt
           ? formatTicketDateTime(ticket.createdAt).date
@@ -434,40 +672,277 @@ export class TicketsService {
           ? formatTicketDateTime(ticket.solvedAt).time
           : '-',
 
+        userNonEmployeeName: ticket.snapshot?.userNonEmployee || '-',
         engineerName: ticket.engineer?.fullName || '-',
 
         employeeName: ticket.employee?.name || '-',
         employeeNik: ticket.employee?.nik || '-',
-        employeePosition: ticket.employee?.position || '-',
-        employeeDepartment: ticket.employee?.department || '-',
+        employeePosition:
+          ticket.snapshot?.position || ticket.employee?.position || '-',
+        employeeDepartment:
+          ticket.snapshot?.department || ticket.employee?.department || '-',
+
+        spvNik: supervisor.nik || '-',
+        spvName: supervisor.fullName || '-',
 
         assetName: ticket.asset
-          ? `${ticket.asset?.brand} ${ticket.asset?.model}`
+          ? ticket.asset.type
           : '-',
         assetTag: ticket.asset?.assetTag || '-',
-        assetCategory: ticket.asset?.category.name || '-',
+        assetCategory: (ticket.asset?.category.name || '-').toUpperCase(),
 
         vendorName: ticket.asset?.project?.vendor?.name || '-',
         projectName: ticket.asset?.project?.name || '-',
-      });
+      };
 
-      const filledDocxBuffer = doc.getZip().generate({
-        type: 'nodebuffer',
-        compression: 'DEFLATE',
+      const report = await createReport({
+        template: templateBuffer,
+        data,
+        cmdDelimiter: ['{', '}'],
+        additionalJsContext: {
+          spvSignature: () => {
+            return {
+              width: 2,
+              height: 2,
+              data: spvSignatureBuffer.data,
+              extension: spvSignatureBuffer.extension,
+            };
+          },
+          engSignature: () => {
+            return {
+              width: 2,
+              height: 2,
+              data: engSignatureBuffer.data,
+              extension: engSignatureBuffer.extension,
+            };
+          },
+        },
       });
+      const buffer = Buffer.from(report);
 
       libre.convertAsync = promisify(libre.convert);
-      // 5. Konversi docx -> pdf
       const pdfBuffer: Buffer = await libre.convertAsync(
-        filledDocxBuffer,
+        buffer,
         '.pdf',
         undefined,
       );
+
       return pdfBuffer;
-    } catch {
-      throw new InternalServerErrorException(
-        "server is busy, please try again later",
+    } catch (e) {
+      throw new InternalServerErrorException(e);
+    }
+  }
+
+  async uploadTicketPdf(ticketId: number, file: Express.Multer.File) {
+    const ticket = await this.ticketRepository.findOne({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      fs.unlink(file.path, () => { });
+      throw new NotFoundException(`Ticket with id ${ticketId} not found`);
+    }
+    if (ticket.filePath && fs.existsSync(ticket.filePath)) {
+      fs.unlink(ticket.filePath, () => { });
+    }
+
+    ticket.filePath = file.path;
+    await this.ticketRepository.save(ticket);
+    return {
+      id: ticket.id,
+      filePath: ticket.filePath,
+    };
+  }
+
+  async getTicketStream(id: number): Promise<ReadStream> {
+    const ticket = await this.ticketRepository.findOne({ where: { id } });
+    if (!ticket || !ticket.filePath) {
+      throw new NotFoundException('file not found');
+    }
+    const fullPath = join(process.cwd(), ticket.filePath);
+
+    if (!existsSync(fullPath)) {
+      throw new NotFoundException('file not found');
+    }
+    return createReadStream(fullPath);
+  }
+
+  async importExcel(buffer: Buffer, creatorId: number) {
+    try {
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+
+      const records: RawTicketExcelRow[] = XLSX.utils.sheet_to_json(worksheet, {
+        raw: false,
+        defval: undefined,
+      });
+
+      if (!records || !records.length) {
+        throw new BadRequestException('Excel file is empty');
+      }
+
+      const workLocations = await this.workLocationsService.findAll();
+      const users = await this.userService.findAll();
+      const defaultSla = await this.slaPolicyService.findDefault();
+
+      return await this.ticketRepository.manager.transaction(async (manager) => {
+        const ticketsToSave: Ticket[] = [];
+
+        for (const row of records) {
+          const seqNum =
+            row.no !== undefined && row.no !== '' && !isNaN(Number(row.no))
+              ? Number(row.no)
+              : undefined;
+          const fullNum = row.no ? row.no.toString().trim() : undefined;
+
+          const nikStr = row.nik ? row.nik.toString().trim() : undefined;
+          let employee: Employee | null = null;
+          if (nikStr) {
+            employee = await manager.findOne(Employee, {
+              where: { nik: nikStr },
+            });
+          }
+
+          const picVal = row.pic ? row.pic.toString().trim() : undefined;
+          const positionVal = row.position
+            ? row.position.toString().trim()
+            : row.directorate
+              ? row.directorate.toString().trim()
+              : undefined;
+          const deptVal = row.department
+            ? row.department.toString().trim()
+            : undefined;
+          const divVal = row.division
+            ? row.division.toString().trim()
+            : undefined;
+
+          const snapshot: TicketSnapshot = {
+            userNonEmployee: picVal || undefined,
+            position: positionVal || employee?.position,
+            department: deptVal || employee?.department,
+            division: divVal || employee?.division,
+          };
+
+          let locationId: number | undefined = undefined;
+          if (row.lokasi) {
+            const locStr = row.lokasi.toString().toLowerCase().trim();
+            const foundLoc = workLocations.find(
+              (l) => l.name.toLowerCase().trim() === locStr,
+            );
+            if (foundLoc) {
+              locationId = foundLoc.id;
+            }
+          }
+
+          let engineerId: number | undefined = undefined;
+          if (row.engineer) {
+            const engStr = row.engineer.toString().toLowerCase().trim();
+            const foundEng = users.find(
+              (u) => u.username.toLowerCase().trim() === engStr,
+            );
+            if (foundEng) {
+              engineerId = foundEng.id;
+            }
+          }
+
+          const startAt = parseExcelDateTime(row.waktu_mulai);
+          const solvedAt = parseExcelDateTime(row.waktu_selesai);
+          const createdAt = startAt
+            ? new Date(startAt.getTime() - 60 * 1000)
+            : new Date();
+
+          let statusVal: TicketStatus = TicketStatus.Open;
+          if (row.status) {
+            const s = row.status.toString().toLowerCase().trim();
+            if (Object.values(TicketStatus).includes(s as TicketStatus)) {
+              statusVal = s as TicketStatus;
+            }
+          }
+
+          let slaPolicyId = defaultSla.id;
+          if (
+            row.sla_id !== undefined &&
+            row.sla_id !== '' &&
+            !isNaN(Number(row.sla_id))
+          ) {
+            slaPolicyId = Number(row.sla_id);
+          }
+
+          const newTicket = manager.create(Ticket, {
+            sequenceNumber: seqNum,
+            fullNumber: fullNum || (seqNum ? `${seqNum}` : undefined),
+            assetTag: row.assettag ? row.assettag.toString().trim() : undefined,
+            employeeNik: nikStr,
+            snapshot,
+            engineerId,
+            createdByUserId: creatorId,
+            problem: row.permasalahan ? row.permasalahan.toString().trim() : '',
+            slaPolicyId,
+            locationId,
+            status: statusVal,
+            solution: row.penyelesaian
+              ? row.penyelesaian.toString().trim()
+              : undefined,
+            contact: row.contact ? row.contact.toString().trim() : undefined,
+            remarks: row.remarks ? row.remarks.toString().trim() : undefined,
+            startAt,
+            solvedAt,
+            createdAt,
+          });
+
+          ticketsToSave.push(newTicket);
+        }
+
+        const chunkSize = 50;
+        for (let i = 0; i < ticketsToSave.length; i += chunkSize) {
+          const chunk = ticketsToSave.slice(i, i + chunkSize);
+          await manager.upsert(Ticket, chunk, {
+            conflictPaths: ['fullNumber'],
+            skipUpdateIfNoValuesChanged: true,
+            upsertType: 'on-conflict-do-update',
+          });
+        }
+
+        return {
+          message: `Successfully imported ${ticketsToSave.length} tickets`,
+          count: ticketsToSave.length,
+        };
+      });
+    } catch (error: any) {
+      Logger.error('Error importing tickets from excel:', error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error?.detail || error?.message || 'Failed to import tickets from excel',
       );
     }
   }
+}
+
+function parseExcelDateTime(val: any): Date | undefined {
+  if (!val || val === '') return undefined;
+  if (val instanceof Date) return val;
+  if (typeof val === 'number') {
+    return new Date(Math.round((val - 25569) * 86400 * 1000));
+  }
+  const str = String(val).trim();
+  if (!str) return undefined;
+
+  const ddmmyyyyRegex =
+    /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/;
+  const match = str.match(ddmmyyyyRegex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    const hours = match[4] ? parseInt(match[4], 10) : 0;
+    const minutes = match[5] ? parseInt(match[5], 10) : 0;
+    const seconds = match[6] ? parseInt(match[6], 10) : 0;
+    return new Date(year, month, day, hours, minutes, seconds);
+  }
+
+  const parsed = new Date(str);
+  return isNaN(parsed.getTime()) ? undefined : parsed;
 }

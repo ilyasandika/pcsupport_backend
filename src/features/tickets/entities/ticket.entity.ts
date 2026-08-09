@@ -15,6 +15,7 @@ import { User } from '../../users/entities/user.entity';
 import { SlaPolicy } from '../../sla-policies/entities/sla-policy.entity';
 import { WorkLocation } from '../../work-locations/entities/work-location.entity';
 import { ExternalTicket } from '../../external_tickets/entities/external_ticket.entity';
+import { type TicketSnapshot } from '../interfaces/ticket-snapshot.interface';
 
 @Entity({
   name: 'tickets',
@@ -48,10 +49,26 @@ export class Ticket {
   asset: Asset;
 
   @Column({
+    name: 'backup_asset_tag',
+    nullable: true,
+  })
+  backupAssetTag?: string;
+
+  @ManyToOne(() => Asset, (asset) => asset.tickets)
+  @JoinColumn({ name: 'backup_asset_tag' })
+  backUpAsset?: Asset;
+
+  @Column({
     name: 'employee_nik',
     nullable: true,
   })
-  employeeNik?: string;
+  employeeNik: string;
+
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+  })
+  snapshot?: TicketSnapshot;
 
   @ManyToOne(() => Employee, (employee) => employee.tickets)
   @JoinColumn({ name: 'employee_nik' })
@@ -61,7 +78,7 @@ export class Ticket {
     name: 'engineer_id',
     nullable: true,
   })
-  engineerId?: number;
+  engineerId?: number | null;
 
   @ManyToOne(() => User, (user) => user.tickets)
   @JoinColumn({ name: 'engineer_id' })
@@ -103,7 +120,7 @@ export class Ticket {
     type: 'enum',
     enum: TicketStatus,
   })
-  status: string;
+  status: TicketStatus;
 
   @Column({
     nullable: true,
@@ -113,12 +130,20 @@ export class Ticket {
   @Column({
     nullable: true,
     name: 'start_at',
+    type: 'timestamptz',
   })
-  startAt: Date;
+  startAt?: Date | null;
+
+  @Column({
+    nullable: true,
+    name: 'contact',
+  })
+  contact?: string;
 
   @Column({
     name: 'solved_at',
     nullable: true,
+    type: 'timestamptz',
   })
   solvedAt?: Date;
 
@@ -135,11 +160,13 @@ export class Ticket {
 
   @CreateDateColumn({
     name: 'created_at',
+    type: 'timestamptz',
   })
   createdAt: Date;
 
   @UpdateDateColumn({
     name: 'updated_at',
+    type: 'timestamptz',
   })
   updatedAt: Date;
 
