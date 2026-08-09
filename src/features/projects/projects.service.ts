@@ -4,6 +4,8 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/project.entity';
 import { Repository } from 'typeorm';
+import { plainToInstance } from 'class-transformer';
+import { ProjectResponseDto } from './dto/project-response.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -18,13 +20,23 @@ export class ProjectsService {
   }
 
   async findAll() {
-    return await this.projectRepository.find();
+    const projects = await this.projectRepository.find({
+      relations: {
+        vendor: true,
+      },
+    });
+    return plainToInstance(ProjectResponseDto, projects);
   }
 
   async findOne(name: string) {
-    const project = await this.projectRepository.findOneBy({ name });
+    const project = await this.projectRepository.findOne({
+      where: { name },
+      relations: {
+        vendor: true,
+      },
+    });
     if (!project) throw new NotFoundException('not found');
-    return project;
+    return plainToInstance(ProjectResponseDto, project);
   }
 
   async update(name: string, dto: UpdateProjectDto) {
@@ -37,6 +49,6 @@ export class ProjectsService {
   async remove(name: string) {
     const project = await this.projectRepository.findOneBy({ name });
     if (!project) throw new NotFoundException('not found');
-    return await this.projectRepository.delete(project);
+    return await this.projectRepository.delete(project.name);
   }
 }

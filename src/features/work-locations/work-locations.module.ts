@@ -8,5 +8,6 @@ import { WorkLocation } from './entities/work-location.entity';
   imports: [TypeOrmModule.forFeature([WorkLocation])],
   controllers: [WorkLocationsController],
   providers: [WorkLocationsService],
+  exports: [WorkLocationsService],
 })
 export class WorkLocationsModule {}

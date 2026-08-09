@@ -5,6 +5,7 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -15,10 +16,7 @@ import { Vendor } from '../../vendors/entities/vendor.entity';
   name: 'projects',
 })
 export class Project {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column({
+  @PrimaryColumn({
     unique: true,
   })
   name: string;
@@ -35,11 +33,13 @@ export class Project {
 
   @CreateDateColumn({
     name: 'created_at',
+    type: 'timestamptz',
   })
   createdAt: Date;
 
   @UpdateDateColumn({
     name: 'updated_at',
+    type: 'timestamptz',
   })
   updatedAt: Date;
 

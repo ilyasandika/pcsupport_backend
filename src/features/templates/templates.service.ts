@@ -8,6 +8,11 @@ import { Repository } from 'typeorm';
 import { promises as fs } from 'fs';
 import { Template, TemplateType } from './entities/template.entity';
 import { CreateTemplateDto } from './dto/create-template.dto';
+import { plainToInstance } from 'class-transformer';
+import { TemplateResponseDto } from './dto/template-response.dto';
+import { extname, join } from 'path';
+import { TEMPLATE_UPLOAD_DIR } from '../../common/const/directory.const';
+import { rename } from 'node:fs';
 
 @Injectable()
 export class TemplatesService {
@@ -20,16 +25,25 @@ export class TemplatesService {
     dto: CreateTemplateDto,
     file: Express.Multer.File,
   ): Promise<Template> {
+    const newFilename = `${dto.type}-${Date.now()}${extname(file.originalname)}`;
+    const newPath = join(TEMPLATE_UPLOAD_DIR, newFilename);
+
     const existing = await this.templateRepository.findOne({
       where: { type: dto.type },
     });
 
+    rename(file.path, newPath, (err) => {
+      if (err) {
+        throw new InternalServerErrorException(
+          'Failed to upload template, please try again later',
+        );
+      }
+    });
+
     if (existing) {
       await this.deleteFileIfExists(existing.filePath);
-
-      existing.name = dto.name;
       existing.description = dto.description ?? existing.description;
-      existing.filePath = file.path;
+      existing.filePath = newPath;
 
       try {
         return await this.templateRepository.save(existing);
@@ -40,13 +54,10 @@ export class TemplatesService {
         );
       }
     }
-
-    // Belum ada, buat baru
     const newTemplate = this.templateRepository.create({
       type: dto.type,
-      name: dto.name,
       description: dto.description,
-      filePath: file.path,
+      filePath: newPath,
     });
 
     try {
@@ -59,16 +70,17 @@ export class TemplatesService {
     }
   }
 
-  async findAll(): Promise<Template[]> {
-    return this.templateRepository.find();
+  async findAll() {
+    const templates = await this.templateRepository.find();
+    return plainToInstance(TemplateResponseDto, templates);
   }
 
-  async findOne(id: number): Promise<Template> {
+  async findOne(id: number) {
     const template = await this.templateRepository.findOne({ where: { id } });
     if (!template) {
       throw new NotFoundException(`Template with id ${id} not found`);
     }
-    return template;
+    return plainToInstance(TemplateResponseDto, template);
   }
 
   async findByType(type: TemplateType): Promise<Template> {
@@ -78,9 +90,7 @@ export class TemplatesService {
       },
     });
     if (!template) {
-      throw new NotFoundException(
-        `Template with type ${type} not found`,
-      );
+      throw new NotFoundException(`Template with type ${type} not found`);
     }
     return template;
   }

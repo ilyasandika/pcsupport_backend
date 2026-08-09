@@ -22,6 +22,11 @@ export class WorkLocationsController {
     return this.workLocationsService.findOne(+id);
   }
 
+  @Get('name/:name')
+  findByName(@Param('name') name: string) {
+    return this.workLocationsService.findByName(name);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateWorkLocationDto) {
     return this.workLocationsService.update(+id, dto);

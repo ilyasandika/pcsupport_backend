@@ -3,7 +3,7 @@ import { CreateWorkLocationDto } from './dto/create-work-location.dto';
 import { UpdateWorkLocationDto } from './dto/update-work-location.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WorkLocation } from './entities/work-location.entity';
-import { Repository } from 'typeorm';
+import { Raw, Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { DetailWorkLocationResponseDto } from './dto/work-location-response.dto';
 
@@ -26,6 +26,20 @@ export class WorkLocationsService {
   async findOne(id: number) {
     try {
       return await this.workLocationRepository.findOneByOrFail({ id });
+    } catch {
+      throw new NotFoundException('Work Location Not Found');
+    }
+  }
+
+  async findByName(name: string) {
+    try {
+      return await this.workLocationRepository.findOne({
+        where: {
+          name: Raw((alias) => `LOWER(${alias}) = LOWER(:searchName)`, {
+            searchName: name,
+          }),
+        },
+      });
     } catch {
       throw new NotFoundException('Work Location Not Found');
     }

@@ -7,10 +7,6 @@ export class CreateTemplateDto {
   type: TemplateType;
 
   @IsString()
-  @IsNotEmpty()
-  name: string;
-
-  @IsString()
   @IsOptional()
   description?: string;
 }

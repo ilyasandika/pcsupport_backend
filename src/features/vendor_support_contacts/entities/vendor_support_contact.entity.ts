@@ -9,13 +9,7 @@ import {
 } from 'typeorm';
 import { ContactType } from '../../../common/enums/vendor-contact-type.enum';
 import { Vendor } from '../../vendors/entities/vendor.entity';
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsPhoneNumber,
-  ValidateIf,
-} from 'class-validator';
-import { Exclude } from 'class-transformer';
+
 
 @Entity({
   name: 'vendor_support_contacts',
@@ -38,11 +32,13 @@ export class VendorSupportContact {
 
   @CreateDateColumn({
     name: 'created_at',
+    type: 'timestamptz',
   })
   createdAt: Date;
 
   @UpdateDateColumn({
     name: 'updated_at',
+    type: 'timestamptz',
   })
   updatedAt: Date;
 

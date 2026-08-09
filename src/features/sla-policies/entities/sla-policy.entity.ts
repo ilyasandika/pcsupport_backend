@@ -10,6 +10,7 @@ import { Ticket } from '../../tickets/entities/ticket.entity';
 
 enum Priority {
   LOW = 'low',
+  NORMAL = 'normal',
   MEDIUM = 'medium',
   HIGH = 'high',
 }
@@ -30,7 +31,14 @@ export class SlaPolicy {
   priority: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description?: string;
+
+  @Column({
+    default: false,
+    name: 'is_default',
+    type: 'boolean',
+  })
+  isDefault: boolean;
 
   @Column({ type: 'bigint', default: 0 })
   responseTimeSeconds: number;
@@ -44,9 +52,15 @@ export class SlaPolicy {
   @OneToMany(() => Ticket, (ticket) => ticket.slaPolicy)
   tickets: Ticket[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({
+    name: 'created_at',
+    type: 'timestamptz',
+  })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({
+    name: 'updated_at',
+    type: 'timestamptz',
+  })
   updatedAt: Date;
 }

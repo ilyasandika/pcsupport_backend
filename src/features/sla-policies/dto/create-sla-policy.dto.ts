@@ -23,6 +23,10 @@ export class CreateSlaPolicyDto {
   @IsNumber()
   resolutionTimeSeconds: number;
 
+  @IsOptional()
+  @IsBoolean()
+  isDefault: boolean;
+
   @IsNotEmpty()
   @IsBoolean()
   isBusinessHourOnly: boolean;

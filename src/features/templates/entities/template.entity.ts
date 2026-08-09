@@ -26,25 +26,23 @@ export class Template {
   })
   type: TemplateType;
 
-  @Column()
-  name: string;
-
   @Column({
     name: 'file_path',
   })
   filePath: string;
 
-
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description?: string;
 
   @CreateDateColumn({
     name: 'created_at',
+    type: 'timestamptz',
   })
   createdAt: Date;
 
   @UpdateDateColumn({
     name: 'updated_at',
+    type: 'timestamptz',
   })
   updatedAt: Date;
 }

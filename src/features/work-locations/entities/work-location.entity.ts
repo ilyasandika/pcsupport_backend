@@ -25,31 +25,37 @@ export class WorkLocation {
 
   @Column({
     type: 'double precision',
+    nullable: true,
   })
-  longitude: number;
+  longitude?: number;
 
   @Column({
     type: 'double precision',
+    nullable: true,
   })
-  latitude: number;
+  latitude?: number;
 
-  @Column()
-  address: string;
+  @Column({
+    nullable: true,
+  })
+  address?: string;
 
   @CreateDateColumn({
     name: 'created_at',
+    type: 'timestamptz',
   })
   createdAt: Date;
 
   @UpdateDateColumn({
     name: 'updated_at',
+    type: 'timestamptz',
   })
   updatedAt: Date;
 
   //relation
   //
-  // @OneToMany(() => Asset, (asset) => asset.workLocation)
-  // assets: Asset[];
+  @OneToMany(() => Asset, (asset) => asset.workLocation)
+  assets: Asset[];
 
   @OneToMany(() => Ticket, (ticket) => ticket.location)
   tickets: Ticket[];

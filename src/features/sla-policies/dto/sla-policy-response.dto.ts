@@ -14,6 +14,9 @@ export class SlaPolicyResponseDto {
   description: string;
 
   @Expose()
+  isDefault: boolean;
+
+  @Expose()
   responseTimeSeconds: number;
 
   @Expose()

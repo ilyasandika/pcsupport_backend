@@ -30,6 +30,12 @@ export class SlaPoliciesService {
     return sla;
   }
 
+  async findDefault() {
+    const sla = await this.slaPolicyRepository.findOneBy({ isDefault: true });
+    if (!sla) throw new NotFoundException(`SLA Policy not found`);
+    return sla;
+  }
+
   async update(id: number, dto: UpdateSlaPolicyDto) {
     const sla = await this.findOne(id);
     this.slaPolicyRepository.merge(sla, dto);

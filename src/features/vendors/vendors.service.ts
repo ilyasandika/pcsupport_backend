@@ -4,6 +4,9 @@ import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Vendor } from './entities/vendor.entity';
+import { plainToInstance } from 'class-transformer';
+import { VendorSupportContactResponseDto } from '../vendor_support_contacts/dto/vendor_support_contact-response.dto';
+import { VendorResponseDto } from './dto/vendor-response.dto';
 
 @Injectable()
 export class VendorsService {
@@ -16,21 +19,23 @@ export class VendorsService {
   }
 
   async findAll() {
-    return await this.vendorRepository.find({
+    const vendors = await this.vendorRepository.find({
       relations: {
         contacts: true,
       },
     });
+    return plainToInstance(VendorResponseDto, vendors);
   }
 
   async findOne(id: number) {
     try {
-      return await this.vendorRepository.findOneOrFail({
+      const vendor = await this.vendorRepository.findOneOrFail({
         where: { id },
         relations: {
           contacts: true,
         },
       });
+      return plainToInstance(VendorResponseDto, vendor);
     } catch {
       throw new NotFoundException('vendor not found');
     }
