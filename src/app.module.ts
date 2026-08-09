@@ -18,11 +18,16 @@ import { ProjectsModule } from './features/projects/projects.module';
 import { SlaPoliciesModule } from './features/sla-policies/sla-policies.module';
 import { AssetCategoriesModule } from './features/asset_categories/asset_categories.module';
 import { TemplatesModule } from './features/templates/templates.module';
+import { ExternalTicketsModule } from './features/external_tickets/external_tickets.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 @Module({
   imports: [
     AuthModule,
     UsersModule,
+    EventEmitterModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -54,9 +59,15 @@ import { TemplatesModule } from './features/templates/templates.module';
     SlaPoliciesModule,
     AssetCategoriesModule,
     TemplatesModule,
+    ExternalTicketsModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

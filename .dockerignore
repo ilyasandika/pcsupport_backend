@@ -1,0 +1,48 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea
+
+#Storage
+storage
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Environment
+.env
+.env.*
+
+# Tests
+test
+coverage
+
+# Documentation
+README.md
+*.md
+
+# Logs
+*.log
+logs
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Configuration
+eslint.config.mjs
+.prettierrc
+tsconfig.json
+tsconfig.build.json
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

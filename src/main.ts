@@ -18,7 +18,7 @@ async function bootstrap() {
     new GlobalExceptionFilter(),
     new DatabaseExceptionFilter(),
   );
-  app.useGlobalInterceptors(new ResponseInterceptor());
+  // app.useGlobalInterceptors(new ResponseInterceptor());
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

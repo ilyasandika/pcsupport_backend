@@ -23,6 +23,7 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/event-emitter": "^3.1.0",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/mapped-types": "*",
     "@nestjs/passport": "^11.0.5",
@@ -33,17 +34,24 @@
     "class-validator": "^0.14.4",
     "cookie-parser": "^1.4.7",
     "csv-parse": "^6.2.1",
+    "dayjs": "^1.11.21",
+    "docx-templates": "^4.15.0",
+    "docxtemplater": "^3.69.0",
+    "easy-template-x": "^7.2.5",
     "libphonenumber-js": "^1.12.42",
+    "libreoffice-convert": "^1.8.2",
     "mustache": "^4.2.0",
     "mysql2": "^3.18.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.20.0",
+    "pizzip": "^3.2.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "ts-case-convert": "^2.1.0",
     "typeorm": "^0.3.28",
-    "typeorm-extension": "^3.9.0"
+    "typeorm-extension": "^3.9.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -72,7 +80,8 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.3",
+    "ttsc": "^0.23.0",
+    "typescript": "^5.9.3",
     "typescript-eslint": "^8.20.0"
   },
   "jest": {
