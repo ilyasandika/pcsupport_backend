@@ -24,6 +24,7 @@ export class RolesGuard implements CanActivate {
     const user = context.switchToHttp().getRequest<Request>()
       .user as JwtPayload;
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     return requiredRoles.some((role) => user.role === role);
   }
 }

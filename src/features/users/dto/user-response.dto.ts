@@ -2,6 +2,7 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import { Role } from '../../../common/enums/role.enum';
 import { WorkLocationResponseDto } from '../../work-locations/dto/work-location-response.dto';
 import { TicketResponseDtoForAsset } from '../../tickets/dto/ticket-response.dto';
+import { PickType } from '@nestjs/mapped-types';
 
 export class DetailUserResponseDto {
   @Expose()
@@ -9,6 +10,9 @@ export class DetailUserResponseDto {
 
   @Expose()
   username: string;
+
+  @Expose()
+  nik?: string;
 
   @Expose()
   fullName: string;
@@ -24,23 +28,26 @@ export class DetailUserResponseDto {
 
   @Expose()
   @Type(() => TicketResponseDtoForAsset)
-  tickets: TicketResponseDtoForAsset[];
+  tickets?: TicketResponseDtoForAsset[];
+
+  @Expose()
+  @Type(() => TicketResponseDtoForAsset)
+  createdTicket?: TicketResponseDtoForAsset[];
 
   @Expose()
   @Type(() => WorkLocationResponseDto)
   workLocation: WorkLocationResponseDto;
 
   @Expose()
+  signaturePath?: string;
+
+  @Expose()
   active: boolean;
 }
 
-export class UserResponseDto {
-  @Expose()
-  id: number;
-
-  @Expose()
-  fullName: string;
-
-  @Expose()
-  role: Role;
-}
+export class UserResponseDto extends PickType(DetailUserResponseDto, [
+  'id',
+  'username',
+  'fullName',
+  'role',
+] as const) {}

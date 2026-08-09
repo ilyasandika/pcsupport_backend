@@ -10,6 +10,13 @@ import {
   Put,
   Delete,
   UseGuards,
+  UploadedFile,
+  ParseFilePipeBuilder,
+  HttpStatus,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
+  Logger,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -17,11 +24,17 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { CreateTemplateDto } from '../templates/dto/create-template.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import fs from 'node:fs';
+import { memoryStorage } from 'multer';
 @Controller('users')
-// @UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.Engineer, Role.Admin)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Post()
   create(@Body() dto: CreateUserDto) {
@@ -38,6 +51,11 @@ export class UsersController {
     return this.usersService.findEngineers();
   }
 
+  @Get('supervisors')
+  findSupervisors() {
+    return this.usersService.findSupervisors();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: number) {
     return this.usersService.findOne(+id);
@@ -49,12 +67,61 @@ export class UsersController {
   }
 
   @Patch('password/:id')
-  updatePassword(@Param('id') id: string, @Body() dto: UpdateUserPasswordDto) {
-    return this.usersService.updatePassword(+id, dto);
+  async updatePassword(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserPasswordDto,
+  ) {
+    return await this.usersService.updatePassword(+id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
+  }
+
+  @Post(':id/signature')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadSignature(
+    @Param('id') id: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: /^image\/(png|jpeg|jpg)$/,
+          skipMagicNumbersValidation: true,
+        })
+        .addMaxSizeValidator({
+          maxSize: 1 * 1024 * 1024, // 1MB
+        })
+        .build({
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.usersService.uploadTemplate(+id, file);
+  }
+
+  @Post('import-excel')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: memoryStorage(),
+  }))
+  async importExcel(
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType:
+            /^(text\/csv|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet)$/,
+          skipMagicNumbersValidation: true,
+        })
+        .addMaxSizeValidator({
+          maxSize: 5 * 1024 * 1024,
+        })
+        .build({
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return await this.usersService.parseExcel(file.buffer);
   }
 }
