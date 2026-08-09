@@ -1,49 +1,48 @@
-import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
 import { Expose, Type } from 'class-transformer';
 import {
   DetailAssetAssignmentResponseDto,
 } from '../../asset_assignments/dto/asset_assignment-response.dto';
 import { TicketResponseDtoForAsset } from '../../tickets/dto/ticket-response.dto';
+import { WorkLocationResponseDto } from '../../work-locations/dto/work-location-response.dto';
+import { PickType } from '@nestjs/mapped-types';
 
 export class DetailEmployeeResponseDto {
-  @Expose()
-  id: number;
-
   @Expose()
   nik: string;
 
   @Expose()
-  name: string;
+  name?: string;
 
   @Expose()
-  contractType: EmployeeContractType;
+  position?: string;
 
   @Expose()
-  position: string;
+  positionId?: string;
 
   @Expose()
-  positionId: string;
+  fs?: string;
 
   @Expose()
-  fs: string;
+  mjl?: string;
 
   @Expose()
-  mjl: string;
+  bod?: string;
 
   @Expose()
-  bod: string;
+  religion?: string;
 
   @Expose()
-  religion: string;
+  directorate?: string;
 
   @Expose()
-  directorate: string;
+  division?: string;
 
   @Expose()
-  division: string;
+  department?: string;
 
   @Expose()
-  department: string;
+  @Type(() => WorkLocationResponseDto)
+  workLocation: WorkLocationResponseDto;
 
   @Expose()
   @Type(() => TicketResponseDtoForAsset)
@@ -54,7 +53,7 @@ export class DetailEmployeeResponseDto {
   assetAssignments: DetailAssetAssignmentResponseDto[];
 
   @Expose()
-  status?: boolean;
+  status?: string;
 
   @Expose()
   retireDate?: Date;
@@ -66,15 +65,10 @@ export class DetailEmployeeResponseDto {
   updatedAt: Date;
 }
 
-export class EmployeeResponseDto {
-  @Expose()
-  id: number;
-  @Expose()
-  name: string;
-  @Expose()
-  nik: string;
-  @Expose()
-  position: string;
-  @Expose()
-  department: string;
-}
+export class EmployeeResponseDto extends PickType(DetailEmployeeResponseDto, [
+  'name',
+  'nik',
+  'position',
+  'department',
+  'workLocation',
+] as const) {}

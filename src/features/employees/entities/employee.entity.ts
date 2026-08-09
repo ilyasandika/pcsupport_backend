@@ -8,7 +8,6 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { EmployeeContractType } from '../../../common/enums/contract-type.enum';
 import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
 import { Ticket } from '../../tickets/entities/ticket.entity';
 import { WorkLocation } from '../../work-locations/entities/work-location.entity';
@@ -20,42 +19,60 @@ export class Employee {
   @PrimaryColumn()
   nik: string;
 
+  @Column({
+    name: 'nik2',
+    nullable: true,
+  })
+  nik2?: string;
+
   @Column()
   name: string;
 
   @Column({
-    name: 'contract_type',
+    nullable: true,
   })
-  contractType: EmployeeContractType;
-
-  @Column()
-  position: string;
+  position?: string;
 
   @Column({
     name: 'position_id',
+    nullable: true,
   })
-  positionId: string;
+  positionId?: string;
 
-  @Column()
-  fs: string;
+  @Column({
+    nullable: true,
+  })
+  fs?: string;
 
-  @Column()
-  mjl: string;
+  @Column({
+    nullable: true,
+  })
+  mjl?: string;
 
-  @Column()
-  bod: string;
+  @Column({
+    nullable: true,
+  })
+  bod?: string;
 
-  @Column()
-  religion: string;
+  @Column({
+    nullable: true,
+  })
+  religion?: string;
 
-  @Column()
-  directorate: string;
+  @Column({
+    nullable: true,
+  })
+  directorate?: string;
 
-  @Column()
-  division: string;
+  @Column({
+    nullable: true,
+  })
+  division?: string;
 
-  @Column()
-  department: string;
+  @Column({
+    nullable: true,
+  })
+  department?: string;
 
   @Column({
     name: 'work_location_id',
@@ -66,21 +83,27 @@ export class Employee {
   @JoinColumn({ name: 'work_location_id' })
   workLocation: WorkLocation;
 
-  @Column()
-  status?: boolean;
+  @Column({
+    nullable: true,
+  })
+  status?: string;
 
   @Column({
     name: 'retire_date',
+    type: 'timestamptz',
+    nullable: true,
   })
   retireDate?: Date;
 
   @CreateDateColumn({
     name: 'created_at',
+    type: 'timestamptz',
   })
   createdAt: Date;
 
   @UpdateDateColumn({
     name: 'updated_at',
+    type: 'timestamptz',
   })
   updatedAt: Date;
 
