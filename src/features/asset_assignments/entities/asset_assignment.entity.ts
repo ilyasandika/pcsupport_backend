@@ -58,7 +58,7 @@ export class AssetAssignment {
     nullable: true,
     type: 'timestamptz',
   })
-  returnedAt?: Date;
+  returnedAt?: Date | null;
 
   @Column({
     name: 'is_backup',

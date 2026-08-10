@@ -293,7 +293,7 @@ export class AssetAssignmentsService {
       assignment.returnedAt = null;
     }
     if (dto.returnRemarks === null) {
-      assignment.returnRemarks = null;
+      assignment.returnRemarks = "";
     }
 
     const isReturned = !!assignment.returnedAt;

@@ -205,6 +205,17 @@ export class UsersService {
     }
   }
 
+  async getSignatureStream(id: number) {
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user || !user.signaturePath) {
+      throw new NotFoundException(`Signature for user with ID ${id} not found`);
+    }
+    if (!fs.existsSync(user.signaturePath)) {
+      throw new NotFoundException(`Signature file not found on disk`);
+    }
+    return fs.createReadStream(user.signaturePath);
+  }
+
   private async deleteFileIfExists(filePath: string): Promise<void> {
     try {
       await unlink(filePath);

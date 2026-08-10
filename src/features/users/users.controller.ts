@@ -17,7 +17,9 @@ import {
   MaxFileSizeValidator,
   FileTypeValidator,
   Logger,
+  Res,
 } from '@nestjs/common';
+import express from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -77,6 +79,17 @@ export class UsersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
+  }
+
+  @Get(':id/signature')
+  async viewSignature(@Param('id') id: string, @Res() res: express.Response) {
+    const fileStream = await this.usersService.getSignatureStream(+id);
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="signature-${id}.png"`,
+    );
+    fileStream.pipe(res);
   }
 
   @Post(':id/signature')
