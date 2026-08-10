@@ -820,4 +820,28 @@ export class AssetAssignmentsService {
       throw error;
     }
   }
+
+  async remove(id: number) {
+    const assignment = await this.assetAssignmentRepository.findOne({
+      where: { id },
+      relations: { asset: true },
+    });
+    if (!assignment) {
+      throw new NotFoundException('assignment not found');
+    }
+
+    return await this.dataSource.transaction(async (manager) => {
+      if (!assignment.returnedAt && assignment.asset) {
+        const newStatus = assignment.isBackup ? AssetStatus.Backup : AssetStatus.ReadyStock;
+        await this.assetService.update(
+          assignment.asset.assetTag,
+          { status: newStatus },
+          manager,
+          true,
+        );
+      }
+      await manager.remove(assignment);
+      return { message: 'Assignment deleted successfully' };
+    });
+  }
 }
