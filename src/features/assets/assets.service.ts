@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateAssetDto } from './dto/create-asset.dto';
@@ -355,7 +356,7 @@ export class AssetsService {
   ) {
     const asset = await this.assetRepository.findOneBy({ assetTag });
     if (!asset) throw new NotFoundException('asset not found');
-    if (asset.status === AssetStatus.Assigned) {
+    if (asset.status === AssetStatus.Assigned && !isFromAssignment) {
       if (
         dto.status !== AssetStatus.Returned &&
         dto.status !== AssetStatus.Missing &&
@@ -386,12 +387,20 @@ export class AssetsService {
         );
       }
     }
-    const executor = externalManager
-      ? externalManager.getRepository(Asset)
-      : this.assetRepository;
+    try {
+      const executor = externalManager
+        ? externalManager.getRepository(Asset)
+        : this.assetRepository;
 
-    this.assetRepository.merge(asset, dto);
-    return await executor.save(asset);
+      if (dto.warrantyDate as unknown as string === '') dto.warrantyDate = undefined;
+      if (dto.purchaseDate as unknown as string === '') dto.purchaseDate = undefined;
+
+      this.assetRepository.merge(asset, dto);
+      return await executor.save(asset);
+    } catch (e) {
+      Logger.log(e)
+      throw e
+    }
   }
 
   async remove(assetTag: string) {

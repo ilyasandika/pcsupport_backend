@@ -277,14 +277,50 @@ export class AssetAssignmentsService {
     dto: UpdateAssetAssignmentDto,
     externalManager?: EntityManager,
   ) {
-    const assignment = await this.assetAssignmentRepository.findOneBy({ id });
+    const assignment = await this.assetAssignmentRepository.findOne({
+      where: { id },
+      relations: { asset: true, employee: true },
+    });
     if (!assignment) {
       throw new NotFoundException('assignment not found');
     }
+
+    const wasReturned = !!assignment.returnedAt;
+
     this.assetAssignmentRepository.merge(assignment, dto);
 
+    if (dto.returnedAt === null) {
+      assignment.returnedAt = null;
+    }
+    if (dto.returnRemarks === null) {
+      assignment.returnRemarks = null;
+    }
+
+    const isReturned = !!assignment.returnedAt;
+
     const executeOperation = async (manager: EntityManager) => {
-      return await manager.save(assignment);
+      const savedAssignment = await manager.save(assignment);
+
+      if (wasReturned && !isReturned && assignment.asset) {
+        const newStatus = assignment.isBackup
+          ? AssetStatus.AssignedForBackup
+          : AssetStatus.Assigned;
+        await this.assetService.update(
+          assignment.asset.assetTag,
+          { status: newStatus },
+          manager,
+          true,
+        );
+      } else if (!wasReturned && isReturned && assignment.asset) {
+        await this.assetService.update(
+          assignment.asset.assetTag,
+          { status: AssetStatus.Returned },
+          manager,
+          true,
+        );
+      }
+
+      return savedAssignment;
     };
 
     if (externalManager) {
@@ -536,14 +572,6 @@ export class AssetAssignmentsService {
         `Failed to generate BAST PDF: ${e}`,
       );
     }
-  }
-
-  async remove(id: number) {
-    const assignment = await this.assetAssignmentRepository.findOneBy({ id });
-    if (!assignment) {
-      throw new NotFoundException('assignment not found');
-    }
-    return await this.assetAssignmentRepository.remove(assignment);
   }
 
   async uploadAssetAssignmentPdf(
@@ -822,26 +850,37 @@ export class AssetAssignmentsService {
   }
 
   async remove(id: number) {
-    const assignment = await this.assetAssignmentRepository.findOne({
-      where: { id },
-      relations: { asset: true },
-    });
-    if (!assignment) {
-      throw new NotFoundException('assignment not found');
-    }
-
-    return await this.dataSource.transaction(async (manager) => {
-      if (!assignment.returnedAt && assignment.asset) {
-        const newStatus = assignment.isBackup ? AssetStatus.Backup : AssetStatus.ReadyStock;
-        await this.assetService.update(
-          assignment.asset.assetTag,
-          { status: newStatus },
-          manager,
-          true,
-        );
+    try {
+      const assignment = await this.assetAssignmentRepository.findOne({
+        where: { id },
+        relations: { asset: true },
+      });
+      if (!assignment) {
+        throw new NotFoundException('assignment not found');
       }
-      await manager.remove(assignment);
-      return { message: 'Assignment deleted successfully' };
-    });
+      return await this.dataSource.transaction(async (manager) => {
+        if (!assignment.returnedAt && assignment.asset) {
+          const newStatus = assignment.isBackup
+            ? AssetStatus.Backup
+            : AssetStatus.ReadyStock;
+          await this.assetService.update(
+            assignment.asset.assetTag,
+            { status: newStatus },
+            manager,
+            true,
+          );
+        }
+        await manager.remove(assignment);
+        return { message: 'Assignment deleted successfully' };
+      });
+    } catch (error) {
+      Logger.error(`Failed to remove asset assignment (ID: ${id}):`, error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        `Failed to remove asset assignment: ${error?.message || error}`,
+      );
+    }
   }
 }
