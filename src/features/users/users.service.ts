@@ -8,7 +8,7 @@ import {
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { QueryBuilder, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
@@ -20,6 +20,7 @@ import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
 import { extname, join } from 'path';
 import { SIGNATURE_UPLOAD_DIR } from '../../common/const/directory.const';
 import { rename, unlink } from 'node:fs/promises';
+import * as fs from 'fs';
 import * as XLSX from 'xlsx';
 import { RawUserExcelRow } from '../../common/interfaces/raw-user-excel.interface';
 
@@ -27,7 +28,7 @@ import { RawUserExcelRow } from '../../common/interfaces/raw-user-excel.interfac
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async create(dto: CreateUserDto) {
     const { username, email } = dto;
@@ -57,11 +58,21 @@ export class UsersService {
   }
 
   async findAll() {
-    const users = await this.userRepository.find({
-      relations: {
-        workLocation: true,
-      },
-    });
+    const users = await this.userRepository
+      .createQueryBuilder('users')
+      .leftJoinAndSelect('users.workLocation', 'workLocation')
+      .addSelect(
+        `CASE users.role
+          WHEN '${Role.Admin}' THEN 1
+          WHEN '${Role.Supervisor}' THEN 2
+          WHEN '${Role.Helpdesk}' THEN 3
+          WHEN '${Role.Engineer}' THEN 4
+          ELSE 5
+        END`,
+        'role_priority',
+      )
+      .orderBy('role_priority', 'ASC')
+      .getMany();
     return plainToInstance(DetailUserResponseDto, users);
   }
 
@@ -214,6 +225,19 @@ export class UsersService {
       throw new NotFoundException(`Signature file not found on disk`);
     }
     return fs.createReadStream(user.signaturePath);
+  }
+
+  async deleteSignature(id: number) {
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user || !user.signaturePath) {
+      throw new NotFoundException(`Signature for user with ID ${id} not found`);
+    }
+
+    await this.deleteFileIfExists(user.signaturePath);
+
+    user.signaturePath = null as any;
+    await this.userRepository.save(user);
+    return { message: 'Signature deleted successfully' };
   }
 
   private async deleteFileIfExists(filePath: string): Promise<void> {

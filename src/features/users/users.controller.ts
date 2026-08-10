@@ -114,6 +114,11 @@ export class UsersController {
     return this.usersService.uploadTemplate(+id, file);
   }
 
+  @Delete(':id/signature')
+  async deleteSignature(@Param('id') id: string) {
+    return await this.usersService.deleteSignature(+id);
+  }
+
   @Post('import-excel')
   @UseInterceptors(FileInterceptor('file', {
     storage: memoryStorage(),
