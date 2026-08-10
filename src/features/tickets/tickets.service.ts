@@ -560,16 +560,27 @@ export class TicketsService {
   }
 
   async getCountByStatus(user: JwtPayload) {
-    const query = this.ticketRepository.createQueryBuilder('ticket');
+    const query = this.ticketRepository
+      .createQueryBuilder('ticket')
+      .leftJoin('ticket.engineer', 'engineer');
 
     if (user.role === Role.Engineer) {
       query.where('ticket.engineerId = :engineerId', { engineerId: user.sub });
     }
 
-    const rawResults: { count: string; status: TicketStatus }[] = await query
+    const rawResults: {
+      count: string;
+      status: TicketStatus;
+      engineerId: string | null;
+      engineerName: string | null;
+    }[] = await query
       .select('ticket.status', 'status')
+      .addSelect('ticket.engineerId', 'engineerId')
+      .addSelect('engineer.fullName', 'engineerName')
       .addSelect('COUNT(ticket.id)', 'count')
       .groupBy('ticket.status')
+      .addGroupBy('ticket.engineerId')
+      .addGroupBy('engineer.fullName')
       .getRawMany();
 
     const counts = {
@@ -584,40 +595,81 @@ export class TicketsService {
       cancelled: 0,
     };
 
+    type EngineerCount = { engineerId: number | null; engineerName: string; count: number };
+
+    const byEngineer: Record<string, EngineerCount[]> = {
+      total: [],
+      open: [],
+      pending: [],
+      inProgress: [],
+      closedRemote: [],
+      closedVisit: [],
+      closedOnsite: [],
+      resolved: [],
+      cancelled: [],
+    };
+
+    const totalEngineerMap = new Map<string, EngineerCount>();
+
     rawResults.forEach((row) => {
       const count = parseInt(row.count, 10);
+      const status = row.status;
+      const engineerId = row.engineerId ? Number(row.engineerId) : null;
+      const engineerName = row.engineerName || 'Unassigned';
 
       counts.total += count;
 
       switch (row.status) {
         case TicketStatus.Open:
-          counts.open = count;
+          counts.open += count;
           break;
         case TicketStatus.Pending:
-          counts.pending = count;
+          counts.pending += count;
           break;
         case TicketStatus.InProgress:
-          counts.inProgress = count;
+          counts.inProgress += count;
           break;
         case TicketStatus.ClosedRemote:
-          counts.closedRemote = count;
+          counts.closedRemote += count;
           break;
         case TicketStatus.ClosedVisit:
-          counts.closedVisit = count;
+          counts.closedVisit += count;
           break;
         case TicketStatus.ClosedOnsite:
-          counts.closedOnsite = count;
+          counts.closedOnsite += count;
           break;
         case TicketStatus.Resolved:
-          counts.resolved = count;
+          counts.resolved += count;
           break;
         case TicketStatus.Cancelled:
-          counts.cancelled = count;
+          counts.cancelled += count;
           break;
       }
+
+      let keyInByEngineer = status as string;
+      if (status === TicketStatus.ClosedRemote) keyInByEngineer = 'closedRemote';
+      else if (status === TicketStatus.ClosedVisit) keyInByEngineer = 'closedVisit';
+      else if (status === TicketStatus.ClosedOnsite) keyInByEngineer = 'closedOnsite';
+      else if (status === TicketStatus.InProgress) keyInByEngineer = 'inProgress';
+
+      if (!byEngineer[keyInByEngineer]) {
+        byEngineer[keyInByEngineer] = [];
+      }
+      byEngineer[keyInByEngineer].push({ engineerId, engineerName, count });
+
+      const mapKey = engineerId ? `id_${engineerId}` : 'unassigned';
+      if (!totalEngineerMap.has(mapKey)) {
+        totalEngineerMap.set(mapKey, { engineerId, engineerName, count: 0 });
+      }
+      totalEngineerMap.get(mapKey)!.count += count;
     });
 
-    return counts;
+    byEngineer.total = Array.from(totalEngineerMap.values());
+
+    return {
+      ...counts,
+      byEngineer,
+    };
   }
 
   async hardRemove(id: number) {
