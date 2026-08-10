@@ -32,13 +32,6 @@ export class CreateAssetDto {
   @IsString()
   hostname?: string;
 
-  // @IsNotEmpty()
-  // @IsString()
-  // brand: string;
-  //
-  // @IsOptional()
-  // model?: string;
-
   @IsOptional()
   @IsString()
   type?: string;
