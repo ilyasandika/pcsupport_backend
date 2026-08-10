@@ -47,6 +47,11 @@ export class AssetsController {
     return this.assetsService.findAll({ status: [AssetStatus.Backup] });
   }
 
+  @Get('employee/:nik')
+  findByEmployeeNik(@Param('nik') nik: string) {
+    return this.assetsService.findActiveByEmployeeNik(nik);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.assetsService.findOne(id);

@@ -8,7 +8,7 @@ import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Asset, AssetStatus, SupportDetail } from './entities/asset.entity';
-import { Brackets, EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { Brackets, EntityManager, FindOneOptions, IsNull, Repository } from 'typeorm';
 import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
 import { plainToInstance } from 'class-transformer';
 import {
@@ -270,6 +270,39 @@ export class AssetsService {
       data: plainToInstance(AssetResponseDto, formattedAsset),
       meta,
     };
+  }
+
+  async findActiveByEmployeeNik(
+    employeeNik: string,
+  ): Promise<AssetResponseDto[]> {
+    const activeAssignments = await this.assetAssignmentRepository.find({
+      where: {
+        picEmployeeNik: employeeNik,
+        returnedAt: IsNull(),
+      },
+      relations: {
+        asset: {
+          category: true,
+          workLocation: true,
+          project: {
+            vendor: true,
+          },
+        },
+        employee: true,
+      },
+      order: {
+        assignedAt: 'DESC',
+      },
+    });
+
+    const assetsWithAssignment = activeAssignments
+      .filter((assignment) => assignment.asset)
+      .map((assignment) => ({
+        ...assignment.asset,
+        assetAssignment: assignment,
+      }));
+
+    return plainToInstance(AssetResponseDto, assetsWithAssignment);
   }
 
   async findOne(
