@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsNumber } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Role } from '../../../common/enums/role.enum';
 
 export class CreateUserDto {
@@ -7,10 +7,14 @@ export class CreateUserDto {
 
   @IsNotEmpty()
   password: string;
-  
+
   @IsNotEmpty()
   @IsEmail()
   email: string;
+
+  @IsOptional()
+  @IsString()
+  nik?: string;
 
   @IsNotEmpty()
   fullName: string;
@@ -28,6 +32,10 @@ export class CreateUserDto {
     {},
     {
       message: 'Work Location must sends an ID as number',
-  })
+    })
   workLocationId: number;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 }
