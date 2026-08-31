@@ -1,21 +1,36 @@
 import {
-  IsDateString,
-  IsNotEmpty,
+  IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateAssignmentPdfDto {
   @IsOptional()
-  @IsString()
-  phoneNumber: string;
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
+  eSignEngineer?: boolean;
 
-  @IsNotEmpty()
-  @IsNumber()
-  engineerId: number;
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
+  eSignSupervisor?: boolean;
 
-  @IsNotEmpty()
-  @IsNumber()
-  supervisorId: number;
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
+  eSignUser?: boolean;
 }
