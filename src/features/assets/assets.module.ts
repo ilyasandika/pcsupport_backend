@@ -5,11 +5,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Asset } from './entities/asset.entity';
 import { AssetCategoriesModule } from '../asset_categories/asset_categories.module';
 import { AssetAssignment } from '../asset_assignments/entities/asset_assignment.entity';
+import { Ticket } from '../tickets/entities/ticket.entity';
 import { WorkLocationsModule } from '../work-locations/work-locations.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Asset, AssetAssignment]),
+    TypeOrmModule.forFeature([Asset, AssetAssignment, Ticket]),
     AssetCategoriesModule,
     WorkLocationsModule,
   ],
