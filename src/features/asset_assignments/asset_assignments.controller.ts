@@ -30,7 +30,7 @@ import { GetUser } from '../../common/decorators/get-user.decorator';
 import * as jwtPayloadInterface from '../../common/interfaces/jwt-payload.interface';
 import { Role } from '../../common/enums/role.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { assetAssignmentMulterOptions } from '../../config/multer.config';
+import { assetAssignmentMulterOptions, signatureMulterOptions } from '../../config/multer.config';
 import { type JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 
 @Controller('asset-assignments')
@@ -172,6 +172,72 @@ export class AssetAssignmentsController {
       file,
       'return',
     );
+  }
+
+  @Delete(':id/pdf/assign')
+  async deletePdfAssign(@Param('id') id: string) {
+    return this.assetAssignmentsService.deleteAssetAssignmentPdf(+id, 'assign');
+  }
+
+  @Delete(':id/pdf/return')
+  async deletePdfReturn(@Param('id') id: string) {
+    return this.assetAssignmentsService.deleteAssetAssignmentPdf(+id, 'return');
+  }
+
+  @Post(':id/user-signature/assign')
+  @UseInterceptors(FileInterceptor('file', signatureMulterOptions))
+  async uploadUserSignatureAssign(
+    @Param('id') id: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: /^image\/(png|jpeg|jpg)$/,
+          skipMagicNumbersValidation: true,
+        })
+        .addMaxSizeValidator({ maxSize: 2 * 1024 * 1024 })
+        .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.assetAssignmentsService.uploadUserSignature(+id, file, 'assign');
+  }
+
+  @Post(':id/user-signature/return')
+  @UseInterceptors(FileInterceptor('file', signatureMulterOptions))
+  async uploadUserSignatureReturn(
+    @Param('id') id: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: /^image\/(png|jpeg|jpg)$/,
+          skipMagicNumbersValidation: true,
+        })
+        .addMaxSizeValidator({ maxSize: 2 * 1024 * 1024 })
+        .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.assetAssignmentsService.uploadUserSignature(+id, file, 'return');
+  }
+
+  @Get(':id/user-signature/assign')
+  async getUserSignatureAssign(
+    @Param('id') id: string,
+    @Res() res: express.Response,
+  ) {
+    const fileStream = await this.assetAssignmentsService.getUserSignatureStream(+id, 'assign');
+    res.setHeader('Content-Type', 'image/png');
+    fileStream.pipe(res);
+  }
+
+  @Get(':id/user-signature/return')
+  async getUserSignatureReturn(
+    @Param('id') id: string,
+    @Res() res: express.Response,
+  ) {
+    const fileStream = await this.assetAssignmentsService.getUserSignatureStream(+id, 'return');
+    res.setHeader('Content-Type', 'image/png');
+    fileStream.pipe(res);
   }
 
   @Get(':id/pdf')
