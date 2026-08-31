@@ -61,6 +61,31 @@ export class DetailAssetAssignmentResponseDto {
   returnFilePath?: string;
 
   @Expose()
+  assignUserSignaturePath?: string | null;
+
+  @Expose()
+  returnUserSignaturePath?: string | null;
+
+  @Expose()
+  @Type(() => UserResponseDto)
+  returnBy?: UserResponseDto;
+
+  @Expose()
+  assignFullTicketNumber?: string;
+
+  @Expose()
+  returnFullTicketNumber?: string;
+
+  @Expose()
+  assignTicket?: any;
+
+  @Expose()
+  returnTicket?: any;
+
+  @Expose()
+  remarks?: string;
+
+  @Expose()
   createdAt: Date;
 
   @Expose()
