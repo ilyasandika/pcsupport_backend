@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Body,
+  Query,
   UseInterceptors,
   ClassSerializerInterceptor,
   Get,
@@ -24,6 +25,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
+import { SyncUserTagsDto } from './dto/sync-user-tags.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -34,7 +36,7 @@ import fs from 'node:fs';
 import { memoryStorage } from 'multer';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.Engineer, Role.Admin)
+// @Roles(Role.Admin)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
@@ -49,16 +51,19 @@ export class UsersController {
   }
 
   @Get('engineers')
+  // @Roles(Role.Admin, Role.Supervisor)
   findEngineers() {
     return this.usersService.findEngineers();
   }
 
   @Get('supervisors')
+  // @Roles(Role.Admin)
   findSupervisors() {
     return this.usersService.findSupervisors();
   }
 
   @Get(':id')
+  @Roles(Role.Admin, Role.Supervisor)
   findOne(@Param('id') id: number) {
     return this.usersService.findOne(+id);
   }
@@ -74,6 +79,47 @@ export class UsersController {
     @Body() dto: UpdateUserPasswordDto,
   ) {
     return await this.usersService.updatePassword(+id, dto);
+  }
+
+  @Patch(':id/status')
+  async toggleStatus(
+    @Param('id') id: string,
+    @Body('active') active?: boolean,
+  ) {
+    if (typeof active === 'boolean') {
+      return await this.usersService.setActiveStatus(+id, active);
+    }
+    return await this.usersService.toggleStatus(+id);
+  }
+
+  @Patch(':id/toggle-status')
+  async toggleStatusAlias(@Param('id') id: string) {
+    return await this.usersService.toggleStatus(+id);
+  }
+
+  @Patch(':id/activate')
+  async activateUser(@Param('id') id: string) {
+    return await this.usersService.activateUser(+id);
+  }
+
+  @Patch(':id/deactivate')
+  async deactivateUser(@Param('id') id: string) {
+    return await this.usersService.deactivateUser(+id);
+  }
+
+  @Post(':id/sync-tags')
+  @Roles(Role.Admin, Role.Supervisor)
+  async syncUserTags(
+    @Param('id') id: string,
+    @Body() bodyDto?: SyncUserTagsDto,
+    @Query() queryDto?: SyncUserTagsDto,
+  ) {
+    const dto: SyncUserTagsDto = {
+      period: bodyDto?.period || queryDto?.period,
+      year: bodyDto?.year ?? queryDto?.year,
+      month: bodyDto?.month ?? queryDto?.month,
+    };
+    return await this.usersService.syncUserTags(+id, dto);
   }
 
   @Delete(':id')
