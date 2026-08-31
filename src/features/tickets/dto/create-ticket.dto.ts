@@ -1,11 +1,14 @@
 import {
-  IsDateString, IsEnum,
+  IsBoolean,
+  IsDateString,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
 import { TicketStatus } from '../../../common/enums/ticket-status.enum';
+import { AssignmentType } from '../../../common/enums/assignment-type.enum';
 
 export class CreateTicketDto {
   @IsOptional()
@@ -63,4 +66,12 @@ export class CreateTicketDto {
   @IsOptional()
   @IsEnum(TicketStatus)
   status?: TicketStatus;
+
+  @IsOptional()
+  @IsBoolean()
+  isAssetAssignment?: boolean;
+
+  @IsOptional()
+  @IsEnum(AssignmentType)
+  assignmentType?: AssignmentType;
 }
