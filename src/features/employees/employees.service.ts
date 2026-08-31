@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Employee } from './entities/employee.entity';
 import { EntityManager, Repository } from 'typeorm';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { plainToInstance } from 'class-transformer';
 import {
   DetailEmployeeResponseDto,
@@ -10,8 +11,12 @@ import {
 } from './dto/employee-response.dto';
 
 import * as XLSX from 'xlsx';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { RawEmployeeExcelRow } from '../../common/interfaces/raw-employee-excel.interface';
 import { WorkLocationsService } from '../work-locations/work-locations.service';
+
+dayjs.extend(customParseFormat);
 
 @Injectable()
 export class EmployeesService {
@@ -19,7 +24,55 @@ export class EmployeesService {
     @InjectRepository(Employee)
     private readonly employeeRepository: Repository<Employee>,
     private readonly workLocationService: WorkLocationsService,
-  ) {}
+  ) { }
+
+  async create(dto: CreateEmployeeDto): Promise<DetailEmployeeResponseDto> {
+    const existing = await this.employeeRepository.findOne({
+      where: { nik: dto.nik },
+    });
+    if (existing) {
+      throw new ConflictException(`Employee with NIK ${dto.nik} already exists`);
+    }
+
+    if (dto.workLocationId) {
+      await this.workLocationService.findOne(dto.workLocationId);
+    }
+
+    const employee = this.employeeRepository.create(dto);
+    const saved = await this.employeeRepository.save(employee);
+    return this.findOne(saved.nik);
+  }
+
+  async update(
+    nik: string,
+    dto: UpdateEmployeeDto,
+  ): Promise<DetailEmployeeResponseDto> {
+    const employee = await this.employeeRepository.findOne({
+      where: { nik },
+    });
+    if (!employee) {
+      throw new NotFoundException(`Employee with NIK ${nik} not found`);
+    }
+
+    if (dto.workLocationId) {
+      await this.workLocationService.findOne(dto.workLocationId);
+    }
+
+    Object.assign(employee, dto);
+    await this.employeeRepository.save(employee);
+    return this.findOne(nik);
+  }
+
+  async remove(nik: string): Promise<{ message: string }> {
+    const employee = await this.employeeRepository.findOne({
+      where: { nik },
+    });
+    if (!employee) {
+      throw new NotFoundException(`Employee with NIK ${nik} not found`);
+    }
+    await this.employeeRepository.remove(employee);
+    return { message: `Employee ${nik} deleted successfully` };
+  }
 
   async parseExcel(buffer: Buffer) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
@@ -37,10 +90,21 @@ export class EmployeesService {
       (row: RawEmployeeExcelRow) => {
         let formattedRetireDate: Date | undefined = undefined;
         if (row['PENSIUN']) {
-          const parts = row['PENSIUN'].split('/');
-          if (parts.length === 3) {
-            const [d, m, y] = parts.map(Number);
-            formattedRetireDate = new Date(y, m - 1, d);
+          const rawDateStr = String(row['PENSIUN']).trim();
+          if (rawDateStr) {
+            const parsed = dayjs(
+              rawDateStr,
+              ['DD/MM/YYYY', 'D/M/YYYY', 'DD-MM-YYYY', 'YYYY-MM-DD', 'YYYY/MM/DD'],
+              true,
+            );
+            if (parsed.isValid()) {
+              formattedRetireDate = parsed.toDate();
+            } else {
+              const fallback = dayjs(rawDateStr);
+              if (fallback.isValid()) {
+                formattedRetireDate = fallback.toDate();
+              }
+            }
           }
         }
 
@@ -98,6 +162,11 @@ export class EmployeesService {
     const employees = await this.employeeRepository.find({
       relations: {
         workLocation: true,
+      },
+      order: {
+        division: 'ASC',
+        name: 'ASC',
+        status: 'desc',
       },
     });
     if (forList) return plainToInstance(EmployeeResponseDto, employees);
