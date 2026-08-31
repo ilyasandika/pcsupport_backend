@@ -18,6 +18,17 @@ export class TicketQueryDto extends PaginationQueryDto {
   assetSn?: string;
 
   @IsOptional()
+  @IsArray()
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string' && value.includes(','))
+      return value.split(',').map((v) => v.trim());
+    return [value];
+  })
+  category?: string[];
+
+  @IsOptional()
   @IsString()
   employeeName?: string;
 
@@ -36,6 +47,10 @@ export class TicketQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   createdByName?: string;
+
+  @IsOptional()
+  @IsString()
+  approvedByName?: string;
 
 
 
@@ -77,4 +92,12 @@ export class TicketQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   solution?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  hasBackupAsset?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isNeedBackup?: boolean;
 }
