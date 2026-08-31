@@ -29,6 +29,7 @@ import { AssetsService } from '../assets/assets.service';
 import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
 import { ReturnAssetAssignmentDto } from './dto/return-asset_assignment.dto';
 import { TemplateType } from '../templates/entities/template.entity';
+import dayjs from 'dayjs';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { formatTicketDateTime, getSignatureBuffer } from '../../helper';
@@ -46,10 +47,11 @@ import { UsersService } from '../users/users.service';
 import { Asset, AssetStatus } from '../assets/entities/asset.entity';
 import { TicketsService } from '../tickets/tickets.service';
 import { TicketStatus } from '../../common/enums/ticket-status.enum';
+import { AssignmentType } from '../../common/enums/assignment-type.enum';
+import { Ticket } from '../tickets/entities/ticket.entity';
 import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import * as XLSX from 'xlsx';
 import { RawAssignmentExcelRow } from '../../common/interfaces/raw-assignment-excel.interfafce';
-import dayjs from 'dayjs';
 import { Employee } from '../employees/entities/employee.entity';
 
 @Injectable()
@@ -163,8 +165,9 @@ export class AssetAssignmentsService {
       Logger.log(
         '[Assigment] end update backup asset status to assigned for backup',
       );
+      let createdTicket: Ticket | undefined = undefined;
       if (!externalManager) {
-        await this.ticketService.create(
+        createdTicket = await this.ticketService.create(
           {
             assetTag: asset.assetTag,
             employeeNik: employee.nik,
@@ -177,6 +180,8 @@ export class AssetAssignmentsService {
             remarks: dto.assignRemarks,
             solvedAt: new Date(dto.assignedAt),
             status: TicketStatus.ClosedOnsite,
+            isAssetAssignment: true,
+            assignmentType: dto.isBackup ? AssignmentType.Backup : AssignmentType.Assign,
           },
           creatorId,
           manager,
@@ -184,6 +189,9 @@ export class AssetAssignmentsService {
       }
       Logger.log('[Assigment] start create assigment');
       const assignment = manager.create(AssetAssignment, dto);
+      if (createdTicket?.fullNumber) {
+        assignment.assignFullTicketNumber = createdTicket.fullNumber;
+      }
       Logger.log('[Assigment] end create assigment');
       assignment.createdById = creatorId;
       Logger.log('[Assigment] start save assigment', assignment);
@@ -198,7 +206,7 @@ export class AssetAssignmentsService {
     };
 
     if (externalManager) {
-      Logger.log('[Assigment] start save assigment 2');
+      Logger.log('[Assigment] start save assigment 2'); ``
       return await executeOperation(externalManager);
     } else {
       return await this.dataSource.transaction(async (manager) => {
@@ -257,6 +265,13 @@ export class AssetAssignmentsService {
       relations: {
         createdBy: true,
         assignBy: true,
+        returnBy: true,
+        assignTicket: {
+          approvedBy: true,
+        },
+        returnTicket: {
+          approvedBy: true,
+        },
         employee: {
           workLocation: true,
         },
@@ -406,7 +421,7 @@ export class AssetAssignmentsService {
         }
       }
 
-      await this.ticketService.create(
+      const returnTicket = await this.ticketService.create(
         {
           assetTag: assignment.asset.assetTag,
           employeeNik: assignment.employee.nik,
@@ -419,10 +434,17 @@ export class AssetAssignmentsService {
           remarks: dto.remarks,
           solvedAt: new Date(),
           status: TicketStatus.ClosedOnsite,
+          isAssetAssignment: true,
+          assignmentType: AssignmentType.Return,
         },
         user.sub as number,
         manager,
       );
+
+      if (returnTicket?.fullNumber) {
+        savedAssignment.returnFullTicketNumber = returnTicket.fullNumber;
+        await manager.save(savedAssignment);
+      }
 
       return savedAssignment;
     });
@@ -478,13 +500,35 @@ export class AssetAssignmentsService {
     );
     const oldAssetTag = lastReturnedAssignment?.asset?.assetTag || '-';
 
-    const supervisor = await this.userService.findOne(dto.supervisorId);
-    const engineer = await this.userService.findOne(dto.engineerId);
+    const engineer =
+      assignType === 'return'
+        ? assignment.returnBy || assignment.assignBy
+        : assignment.assignBy;
+
+    const ticket =
+      assignType === 'return'
+        ? assignment.returnTicket || assignment.assignTicket
+        : assignment.assignTicket || assignment.returnTicket;
+
+    const supervisorId = ticket?.approvedBy?.id;
+    const supervisor = ticket?.approvedBy || (supervisorId ? await this.userService.findOne(supervisorId) : undefined);
 
     try {
       const templateBuffer = await fs.readFile(absoluteTemplatePath);
-      const spvSignatureBuffer = getSignatureBuffer(supervisor.signaturePath);
-      const engSignatureBuffer = getSignatureBuffer(engineer.signaturePath);
+      const userSigPath =
+        assignType === 'return'
+          ? assignment.returnUserSignaturePath
+          : assignment.assignUserSignaturePath;
+
+      const spvSignatureBuffer = getSignatureBuffer(
+        dto?.eSignSupervisor ? supervisor?.signaturePath : null,
+      );
+      const engSignatureBuffer = getSignatureBuffer(
+        dto?.eSignEngineer ? engineer?.signaturePath : null,
+      );
+      const userSignatureBuffer = getSignatureBuffer(
+        dto?.eSignUser ? userSigPath : null,
+      );
 
       const createdAtFormatted = assignment.createdAt
         ? formatTicketDateTime(assignment.createdAt)
@@ -494,8 +538,8 @@ export class AssetAssignmentsService {
         createdAtDate: createdAtFormatted?.date || '-',
         createdAtTime: createdAtFormatted?.time || '-',
 
-        spvName: supervisor.fullName || '-',
-        spvNik: supervisor.nik || '-',
+        spvName: supervisor?.fullName || '-',
+        spvNik: supervisor?.nik || '-',
 
         employeeName: assignment.employee?.name || '-',
         employeeNik: assignment.employee?.nik || '-',
@@ -514,8 +558,8 @@ export class AssetAssignmentsService {
         vendorName: assignment.asset?.project?.vendor?.name || '-',
         projectName: assignment.asset?.project?.name || '-',
 
-        remarks: assignment.assignRemarks || '-',
-        phoneNumber: dto.phoneNumber || '-',
+        remarks: (assignType === 'assign' ? assignment.assignRemarks : assignment.returnRemarks) || assignment.remarks || '-',
+        phoneNumber: assignment.contact || '-',
         date: new Date(
           assignType === 'assign'
             ? assignment.assignedAt
@@ -528,7 +572,7 @@ export class AssetAssignmentsService {
           hourCycle: 'h24',
           minute: '2-digit',
         }),
-        engineerName: engineer.fullName || '-',
+        engineerName: engineer?.fullName || '-',
         supportSn: assignment.asset?.support?.sn || '-',
 
         oldAsset: oldAssetTag,
@@ -541,18 +585,26 @@ export class AssetAssignmentsService {
         additionalJsContext: {
           spvSignature: () => {
             return {
-              width: 2,
-              height: 2,
+              width: 4,
+              height: 1.8,
               data: spvSignatureBuffer.data,
               extension: spvSignatureBuffer.extension,
             };
           },
           engSignature: () => {
             return {
-              width: 2,
-              height: 2,
+              width: 4,
+              height: 1.8,
               data: engSignatureBuffer.data,
               extension: engSignatureBuffer.extension,
+            };
+          },
+          userSignature: () => {
+            return {
+              width: 4,
+              height: 1.8,
+              data: userSignatureBuffer.data,
+              extension: userSignatureBuffer.extension,
             };
           },
         },
@@ -565,6 +617,40 @@ export class AssetAssignmentsService {
         '.pdf',
         undefined,
       );
+
+      if (dto?.eSignEngineer && dto?.eSignSupervisor && dto?.eSignUser) {
+        const assignmentEntity = await this.assetAssignmentRepository.findOne({
+          where: { id: assetAssignmentId },
+          relations: { employee: true, asset: true },
+        });
+        if (assignmentEntity) {
+          const dir = path.join('storages', 'asset_assignments');
+          if (!existsSync(dir)) {
+            await fs.mkdir(dir, { recursive: true });
+          }
+
+          const typeName = assignmentEntity.isBackup ? 'backup' : assignType;
+          const nik = assignmentEntity.employee?.nik || assignmentEntity.picEmployeeNik || 'NIK';
+          const assetTag = assignmentEntity.asset?.assetTag || assignmentEntity.assetTag || 'TAG';
+          const uniqueSuffix = `${dayjs(Date.now()).format('YYYYMMMDD')}-${Math.round(Math.random() * 1000)}`;
+          const fileName = `${typeName}-${assetTag}-${nik}-${uniqueSuffix}.pdf`;
+          const filePath = path.join(dir, fileName);
+
+          const targetField = assignType === 'return' ? 'returnFilePath' : 'assignFilePath';
+          const oldFilePath = assignmentEntity[targetField];
+
+          if (oldFilePath && existsSync(oldFilePath)) {
+            try {
+              await fs.unlink(oldFilePath);
+            } catch { }
+          }
+
+          await fs.writeFile(filePath, pdfBuffer);
+
+          assignmentEntity[targetField] = filePath;
+          await this.assetAssignmentRepository.save(assignmentEntity);
+        }
+      }
 
       return pdfBuffer;
     } catch (e) {
@@ -579,7 +665,6 @@ export class AssetAssignmentsService {
     file: Express.Multer.File,
     type: 'assign' | 'return',
   ) {
-    // 1. Cari data assignment terlebih dahulu
     const assignment = await this.assetAssignmentRepository.findOne({
       where: { id: assetAssignmentId },
       relations: {
@@ -588,7 +673,6 @@ export class AssetAssignmentsService {
       },
     });
 
-    // 2. Jika tidak ditemukan, hapus file temporary lalu throw error
     if (!assignment) {
       if (file?.path && existsSync(file.path)) {
         await fs.unlink(file.path);
@@ -598,15 +682,18 @@ export class AssetAssignmentsService {
       );
     }
 
-    // 3. Format nama file + sertakan ekstensi aslinya
+    const typeName = assignment.isBackup ? 'backup' : type;
+    const nik = assignment.employee?.nik || assignment.picEmployeeNik || 'NIK';
+    const assetTag = assignment.asset?.assetTag || assignment.assetTag || 'TAG';
+    const uniqueSuffix = `${dayjs(Date.now()).format('YYYYMMMDD')}-${Math.round(Math.random() * 1000)}`;
     const fileExt = extname(file.originalname) || '.pdf';
-    const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const newFilename = `${typeName}-${assetTag}-${nik}-${uniqueSuffix}${fileExt}`;
+    const dir = path.join('storages', 'asset_assignments');
+    if (!existsSync(dir)) {
+      await fs.mkdir(dir, { recursive: true });
+    }
+    const newPath = join(dir, newFilename);
 
-    const dateStr = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD lebih rapi daripada toDateString()
-    const newFilename = `${type}-${sanitize(assignment.employee.nik)}-${sanitize(assignment.asset.assetTag)}-${dateStr}${fileExt}`;
-    const newPath = join(ASSET_ASSIGNMENT_UPLOAD_DIR, newFilename);
-
-    // 4. Pindahkan file temporary ke lokasi tujuan dengan try-catch
     try {
       await fs.rename(file.path, newPath);
     } catch (error) {
@@ -621,7 +708,6 @@ export class AssetAssignmentsService {
       type === 'assign' ? 'assignFilePath' : 'returnFilePath';
     const oldFilePath = assignment[targetPathKey];
 
-    // Hapus file lama jika ada
     if (oldFilePath && existsSync(oldFilePath)) {
       try {
         await fs.unlink(oldFilePath);
@@ -630,13 +716,107 @@ export class AssetAssignmentsService {
       }
     }
 
-    // Update record ke database
     assignment[targetPathKey] = newPath;
     await this.assetAssignmentRepository.save(assignment);
 
     return {
       id: assignment.id,
       [targetPathKey]: assignment[targetPathKey],
+    };
+  }
+
+  async uploadUserSignature(
+    assetAssignmentId: number,
+    file: Express.Multer.File,
+    type: 'assign' | 'return' = 'assign',
+  ) {
+    const assignment = await this.assetAssignmentRepository.findOne({
+      where: { id: assetAssignmentId },
+    });
+
+    if (!assignment) {
+      if (file?.path && existsSync(file.path)) {
+        await fs.unlink(file.path);
+      }
+      throw new NotFoundException(
+        `Asset assignment with id ${assetAssignmentId} not found`,
+      );
+    }
+
+    const targetField =
+      type === 'return'
+        ? 'returnUserSignaturePath'
+        : 'assignUserSignaturePath';
+
+    const oldPath = assignment[targetField];
+    if (oldPath && existsSync(oldPath)) {
+      try {
+        await fs.unlink(oldPath);
+      } catch { }
+    }
+
+    assignment[targetField] = file.path;
+    await this.assetAssignmentRepository.save(assignment);
+
+    return {
+      id: assignment.id,
+      [targetField]: assignment[targetField],
+    };
+  }
+
+  async getUserSignatureStream(
+    assetAssignmentId: number,
+    type: 'assign' | 'return' = 'assign',
+  ) {
+    const assignment = await this.assetAssignmentRepository.findOne({
+      where: { id: assetAssignmentId },
+    });
+
+    const targetField =
+      type === 'return'
+        ? 'returnUserSignaturePath'
+        : 'assignUserSignaturePath';
+
+    const sigPath = assignment ? assignment[targetField] : null;
+
+    if (!assignment || !sigPath || !existsSync(sigPath)) {
+      throw new NotFoundException(
+        `User signature for asset assignment ${assetAssignmentId} (${type}) not found`,
+      );
+    }
+    return createReadStream(sigPath);
+  }
+
+  async deleteAssetAssignmentPdf(
+    assetAssignmentId: number,
+    type: 'assign' | 'return' = 'assign',
+  ) {
+    const assignment = await this.assetAssignmentRepository.findOne({
+      where: { id: assetAssignmentId },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException(
+        `Asset assignment with id ${assetAssignmentId} not found`,
+      );
+    }
+
+    const targetField =
+      type === 'return' ? 'returnFilePath' : 'assignFilePath';
+    const filePath = assignment[targetField];
+
+    if (filePath && existsSync(filePath)) {
+      try {
+        await fs.unlink(filePath);
+      } catch { }
+    }
+
+    assignment[targetField] = null;
+    await this.assetAssignmentRepository.save(assignment);
+
+    return {
+      id: assignment.id,
+      message: `Asset assignment PDF (${type}) deleted successfully`,
     };
   }
 
@@ -853,7 +1033,7 @@ export class AssetAssignmentsService {
     try {
       const assignment = await this.assetAssignmentRepository.findOne({
         where: { id },
-        relations: { asset: true },
+        relations: { asset: true, assignTicket: true, returnTicket: true },
       });
       if (!assignment) {
         throw new NotFoundException('assignment not found');
@@ -870,6 +1050,36 @@ export class AssetAssignmentsService {
             true,
           );
         }
+
+        if (assignment.assignFullTicketNumber) {
+          await manager.update(
+            Ticket,
+            { fullNumber: assignment.assignFullTicketNumber },
+            { status: TicketStatus.Cancelled },
+          );
+        }
+        if (assignment.returnFullTicketNumber) {
+          await manager.update(
+            Ticket,
+            { fullNumber: assignment.returnFullTicketNumber },
+            { status: TicketStatus.Cancelled },
+          );
+        }
+        if (
+          !assignment.assignFullTicketNumber &&
+          !assignment.returnFullTicketNumber &&
+          assignment.assetTag
+        ) {
+          await manager.update(
+            Ticket,
+            {
+              assetTag: assignment.assetTag,
+              problem: `Deploy Asset ${assignment.assetTag}`,
+            },
+            { status: TicketStatus.Cancelled },
+          );
+        }
+
         await manager.remove(assignment);
         return { message: 'Assignment deleted successfully' };
       });
@@ -882,5 +1092,18 @@ export class AssetAssignmentsService {
         `Failed to remove asset assignment: ${error?.message || error}`,
       );
     }
+  }
+
+  async findByTicketFullNumber(fullNumber: string): Promise<AssetAssignment | null> {
+    return await this.assetAssignmentRepository.findOne({
+      where: [
+        { assignFullTicketNumber: fullNumber },
+        { returnFullTicketNumber: fullNumber },
+      ],
+    });
+  }
+
+  async updateFilePath(id: number, field: 'assignFilePath' | 'returnFilePath', filePath: string) {
+    await this.assetAssignmentRepository.update(id, { [field]: filePath });
   }
 }
