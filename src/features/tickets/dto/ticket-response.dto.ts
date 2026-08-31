@@ -1,4 +1,5 @@
 import { TicketStatus } from '../../../common/enums/ticket-status.enum';
+import { AssignmentType } from '../../../common/enums/assignment-type.enum';
 import { Expose, Type } from 'class-transformer';
 import { SlaPolicyResponseDto } from '../../sla-policies/dto/sla-policy-response.dto';
 import { WorkLocationResponseDto } from '../../work-locations/dto/work-location-response.dto';
@@ -30,6 +31,13 @@ export class TicketResponseDto {
   @Expose()
   @Type(() => UserResponseDto)
   createdBy: UserResponseDto;
+
+  @Expose()
+  @Type(() => UserResponseDto)
+  approvedBy?: UserResponseDto;
+
+  @Expose()
+  userSignaturePath?: string;
 
   @Expose()
   @Type(() => SlaPolicyResponseDto)
@@ -65,6 +73,15 @@ export class TicketResponseDto {
 
   @Expose()
   filePath?: string;
+
+  @Expose()
+  isAssetAssignment: boolean;
+
+  @Expose()
+  assignmentType?: AssignmentType;
+
+  @Expose()
+  backupAssetTag?: string;
 
   @Expose()
   createdAt: Date;
