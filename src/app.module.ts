@@ -9,7 +9,6 @@ import { EmployeesModule } from './features/employees/employees.module';
 import { AssetsModule } from './features/assets/assets.module';
 import { WorkLocationsModule } from './features/work-locations/work-locations.module';
 import { VendorsModule } from './features/vendors/vendors.module';
-import { VendorSupportContactsModule } from './features/vendor_support_contacts/vendor_support_contacts.module';
 import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 import { AssetAssignmentsModule } from './features/asset_assignments/asset_assignments.module';
 import { TicketsModule } from './features/tickets/tickets.module';
@@ -51,7 +50,6 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
     AssetsModule,
     WorkLocationsModule,
     VendorsModule,
-    VendorSupportContactsModule,
     AssetAssignmentsModule,
     TicketsModule,
     AssetSupportsModule,
