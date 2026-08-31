@@ -11,6 +11,10 @@ export class DetailEmployeeResponseDto {
   nik: string;
 
   @Expose()
+  nik2?: string;
+
+
+  @Expose()
   name?: string;
 
   @Expose()
@@ -71,4 +75,4 @@ export class EmployeeResponseDto extends PickType(DetailEmployeeResponseDto, [
   'position',
   'department',
   'workLocation',
-] as const) {}
+] as const) { }
