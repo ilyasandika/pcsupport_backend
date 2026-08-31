@@ -30,6 +30,7 @@ import { plainToInstance } from 'class-transformer';
 import { TicketResponseDto } from './dto/ticket-response.dto';
 import { TemplatesService } from '../templates/templates.service';
 import { TemplateType } from '../templates/entities/template.entity';
+import { AssignmentType } from '../../common/enums/assignment-type.enum';
 import path from 'node:path';
 import * as fs from 'node:fs';
 import { createReadStream, existsSync, ReadStream } from 'node:fs';
@@ -55,6 +56,7 @@ import * as XLSX from 'xlsx';
 import { WorkLocationsService } from '../work-locations/work-locations.service';
 import { RawTicketExcelRow } from '../../common/interfaces/raw-ticket-excel.interface';
 import { raw } from 'express';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class TicketsService {
@@ -144,6 +146,8 @@ export class TicketsService {
         status: ticketStatus,
         startAt: dto.engineerId ? new Date() : undefined,
         fullNumber,
+        isAssetAssignment: dto.isAssetAssignment ?? false,
+        assignmentType: dto.assignmentType ?? undefined,
       });
 
       return await manager.save(Ticket, newTicket);
@@ -229,6 +233,7 @@ export class TicketsService {
       .leftJoinAndSelect('assetAssignments.employee', 'assignmentEmployee')
       .leftJoinAndSelect('ticket.createdBy', 'createdBy')
       .leftJoinAndSelect('ticket.engineer', 'engineer')
+      .leftJoinAndSelect('ticket.approvedBy', 'approvedBy')
       .leftJoinAndSelect('ticket.employee', 'employee')
       .leftJoinAndSelect('employee.workLocation', 'workLocation')
       .leftJoinAndSelect('ticket.location', 'location')
@@ -256,6 +261,17 @@ export class TicketsService {
       if (query.assetSn) {
         qb.andWhere('asset.serialNumber ILike :assetSn', {
           assetSn: `%${query.assetSn}%`,
+        });
+      }
+    }
+
+    if (query.category) {
+      const categories = Array.isArray(query.category)
+        ? query.category
+        : [query.category];
+      if (categories.length > 0) {
+        qb.andWhere('category.name IN (:...category)', {
+          category: categories,
         });
       }
     }
@@ -295,6 +311,11 @@ export class TicketsService {
     if (query.createdByName) {
       qb.andWhere('createdBy.fullName ILike :createdByName', {
         createdByName: `%${query.createdByName}%`,
+      });
+    }
+    if (query.approvedByName) {
+      qb.andWhere('approvedBy.fullName ILike :approvedByName', {
+        approvedByName: `%${query.approvedByName}%`,
       });
     }
 
@@ -350,6 +371,10 @@ export class TicketsService {
       });
     }
 
+    if (query.hasBackupAsset || query.isNeedBackup) {
+      qb.andWhere('ticket.backupAssetTag IS NOT NULL AND ticket.backupAssetTag != \'\'');
+    }
+
     qb.addSelect(
       `CASE
           WHEN "slaPolicy"."priority" = 'high' THEN 1
@@ -360,15 +385,15 @@ export class TicketsService {
       'priority_label',
     );
 
-    if (user.role === Role.Engineer) {
-      qb.andWhere(
-        new Brackets((qbSub) => {
-          qbSub
-            .where('ticket.engineerId = :engineerId', { engineerId: user.sub })
-            .orWhere('ticket.engineerId IS NULL');
-        }),
-      );
-    }
+    // if (user.role === Role.Engineer) {
+    //   qb.andWhere(
+    //     new Brackets((qbSub) => {
+    //       qbSub
+    //         .where('ticket.engineerId = :engineerId', { engineerId: user.sub })
+    //         .orWhere('ticket.engineerId IS NULL');
+    //     }),
+    //   );
+    // }
 
     if (forDashboard) {
       qb.addSelect(
@@ -418,6 +443,7 @@ export class TicketsService {
         },
         createdBy: true,
         engineer: true,
+        approvedBy: true,
         employee: {
           workLocation: true,
         },
@@ -427,14 +453,14 @@ export class TicketsService {
       withDeleted: true,
     });
     if (!ticket) throw new NotFoundException('ticket not found');
-    if (
-      user &&
-      user.role === Role.Engineer &&
-      ticket.engineerId !== null &&
-      ticket.engineerId !== user.sub
-    ) {
-      throw new ForbiddenException('you cant access this resource');
-    }
+    // if (
+    //   user &&
+    //   user.role === Role.Engineer &&
+    //   ticket.engineerId !== null &&
+    //   ticket.engineerId !== user.sub
+    // ) {
+    //   throw new ForbiddenException('you cant access this resource');
+    // }
     return plainToInstance(TicketResponseDto, ticket);
   }
 
@@ -678,14 +704,31 @@ export class TicketsService {
     return await this.ticketRepository.remove(ticket);
   }
 
-  async generatePdf(ticketId: number, dto: CreateTicketPdfDto) {
+  async generatePdf(ticketId: number, dto?: CreateTicketPdfDto) {
     const ticket = await this.findOne(ticketId);
-    const supervisor = await this.userService.findOne(dto.supervisorId);
+    const supervisorId = ticket.approvedBy?.id;
+    const supervisor = supervisorId
+      ? await this.userService.findOne(supervisorId)
+      : undefined;
     const engineer = ticket.engineer?.id
       ? await this.userService.findOne(ticket.engineer?.id)
       : undefined;
 
-    const template = await this.templateService.findByType(TemplateType.Ticket);
+    const getTargetTemplateType = () => {
+      if (ticket.isAssetAssignment) {
+        if (ticket.assignmentType === AssignmentType.Backup) {
+          return TemplateType.BastBackup;
+        }
+        if (ticket.assignmentType === AssignmentType.Return) {
+          return TemplateType.BastReturn;
+        }
+        return TemplateType.BastAssign;
+      }
+      return TemplateType.Ticket;
+    };
+
+    const targetType = getTargetTemplateType();
+    const template = await this.templateService.findByType(targetType);
     const absoluteTemplatePath = path.join(process.cwd(), template.filePath);
     if (!fs.existsSync(absoluteTemplatePath)) {
       throw new NotFoundException(
@@ -695,8 +738,15 @@ export class TicketsService {
 
     try {
       const templateBuffer = fs.readFileSync(absoluteTemplatePath);
-      const spvSignatureBuffer = getSignatureBuffer(supervisor.signaturePath);
-      const engSignatureBuffer = getSignatureBuffer(engineer?.signaturePath);
+      const spvSignatureBuffer = getSignatureBuffer(
+        dto?.eSignSupervisor ? supervisor?.signaturePath : null,
+      );
+      const engSignatureBuffer = getSignatureBuffer(
+        dto?.eSignEngineer ? engineer?.signaturePath : null,
+      );
+      const userSignatureBuffer = getSignatureBuffer(
+        dto?.eSignUser ? ticket.userSignaturePath : null,
+      );
 
       const data = {
         ticketNumber: ticket.fullNumber || '-',
@@ -725,6 +775,7 @@ export class TicketsService {
           : '-',
 
         userNonEmployeeName: ticket.snapshot?.userNonEmployee || '-',
+        user: ticket.snapshot?.userNonEmployee || 'Penanggung Jawab',
         engineerName: ticket.engineer?.fullName || '-',
 
         employeeName: ticket.employee?.name || '-',
@@ -734,17 +785,27 @@ export class TicketsService {
         employeeDepartment:
           ticket.snapshot?.department || ticket.employee?.department || '-',
 
-        spvNik: supervisor.nik || '-',
-        spvName: supervisor.fullName || '-',
+        spvNik: supervisor?.nik || '-',
+        spvName: supervisor?.fullName || '-',
 
-        assetName: ticket.asset
-          ? ticket.asset.type
-          : '-',
+        workLocation: ticket.location?.name || ticket.employee?.workLocation?.name || '-',
+
+        assetName: ticket.asset ? ticket.asset.type : '-',
         assetTag: ticket.asset?.assetTag || '-',
-        assetCategory: (ticket.asset?.category.name || '-').toUpperCase(),
+        assetCategory: (ticket.asset?.category?.name || '-').toUpperCase(),
+        assetSerialNumber: ticket.asset?.serialNumber || '-',
 
         vendorName: ticket.asset?.project?.vendor?.name || '-',
         projectName: ticket.asset?.project?.name || '-',
+
+        remarks: ticket.remarks || '-',
+        date: ticket.solvedAt
+          ? formatTicketDateTime(ticket.solvedAt).date
+          : ticket.createdAt
+            ? formatTicketDateTime(ticket.createdAt).date
+            : '-',
+        supportSn: ticket.asset?.support?.sn || '-',
+        oldAsset: ticket.backupAssetTag || '-',
       };
 
       const report = await createReport({
@@ -754,18 +815,26 @@ export class TicketsService {
         additionalJsContext: {
           spvSignature: () => {
             return {
-              width: 2,
-              height: 2,
+              width: 4,
+              height: 1.8,
               data: spvSignatureBuffer.data,
               extension: spvSignatureBuffer.extension,
             };
           },
           engSignature: () => {
             return {
-              width: 2,
-              height: 2,
+              width: 4,
+              height: 1.8,
               data: engSignatureBuffer.data,
               extension: engSignatureBuffer.extension,
+            };
+          },
+          userSignature: () => {
+            return {
+              width: 4,
+              height: 1.8,
+              data: userSignatureBuffer.data,
+              extension: userSignatureBuffer.extension,
             };
           },
         },
@@ -779,10 +848,144 @@ export class TicketsService {
         undefined,
       );
 
+      if (dto?.eSignEngineer && dto?.eSignSupervisor && dto?.eSignUser) {
+        const ticketEntity = await this.ticketRepository.findOneBy({ id: ticketId });
+        if (ticketEntity) {
+          if (ticketEntity.isAssetAssignment) {
+            const dir = path.join('storages', 'asset_assignments');
+            if (!fs.existsSync(dir)) {
+              fs.mkdirSync(dir, { recursive: true });
+            }
+
+            if (ticketEntity.filePath && fs.existsSync(ticketEntity.filePath)) {
+              fs.unlink(ticketEntity.filePath, () => { });
+            }
+
+            const typeName =
+              ticketEntity.assignmentType === AssignmentType.Backup
+                ? 'backup'
+                : ticketEntity.assignmentType === AssignmentType.Return
+                  ? 'return'
+                  : 'assign';
+            const nik = ticketEntity.employeeNik || 'NIK';
+            const assetTag = ticketEntity.assetTag || 'TAG';
+            const uniqueSuffix = `${dayjs(Date.now()).format('YYYYMMMDD')}-${Math.round(Math.random() * 1000)}`;
+            const fileName = `${typeName}-${assetTag}-${nik}-${uniqueSuffix}.pdf`;
+            const filePath = path.join(dir, fileName);
+
+            fs.writeFileSync(filePath, pdfBuffer);
+            ticketEntity.filePath = filePath;
+            await this.ticketRepository.save(ticketEntity);
+
+            if (ticketEntity.fullNumber) {
+              const matchingAssignment = await this.assetAssignmentService.findByTicketFullNumber(
+                ticketEntity.fullNumber,
+              );
+              if (matchingAssignment) {
+                const isReturn =
+                  matchingAssignment.returnFullTicketNumber === ticketEntity.fullNumber ||
+                  ticketEntity.assignmentType === AssignmentType.Return;
+                const fieldName = isReturn ? 'returnFilePath' : 'assignFilePath';
+                const oldAssPath = matchingAssignment[fieldName];
+                if (oldAssPath && fs.existsSync(oldAssPath)) {
+                  fs.unlink(oldAssPath, () => { });
+                }
+                await this.assetAssignmentService.updateFilePath(
+                  matchingAssignment.id,
+                  fieldName,
+                  filePath,
+                );
+              }
+            }
+          } else {
+            const dir = path.join('storages', 'tickets');
+            if (!fs.existsSync(dir)) {
+              fs.mkdirSync(dir, { recursive: true });
+            }
+
+            if (ticketEntity.filePath && fs.existsSync(ticketEntity.filePath)) {
+              fs.unlink(ticketEntity.filePath, () => { });
+            }
+
+            const uniqueSuffix = `${dayjs(Date.now()).format('YYYYMMMDD')}-${Math.round(Math.random() * 1000)}`;
+            const fileName = `ticket-${ticket.fullNumber}-${uniqueSuffix}.pdf`;
+            const filePath = path.join(dir, fileName);
+
+            fs.writeFileSync(filePath, pdfBuffer);
+
+            ticketEntity.filePath = filePath;
+            await this.ticketRepository.save(ticketEntity);
+          }
+        }
+      }
+
       return pdfBuffer;
     } catch (e) {
       throw new InternalServerErrorException(e);
     }
+  }
+
+  async uploadUserSignature(ticketId: number, file: Express.Multer.File) {
+    const ticket = await this.ticketRepository.findOne({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      if (fs.existsSync(file.path)) {
+        fs.unlink(file.path, () => { });
+      }
+      throw new NotFoundException(`Ticket with id ${ticketId} not found`);
+    }
+    if (ticket.userSignaturePath && fs.existsSync(ticket.userSignaturePath)) {
+      fs.unlink(ticket.userSignaturePath, () => { });
+    }
+
+    ticket.userSignaturePath = file.path;
+    await this.ticketRepository.save(ticket);
+    return {
+      id: ticket.id,
+      userSignaturePath: ticket.userSignaturePath,
+    };
+  }
+
+  async getUserSignatureStream(ticketId: number) {
+    const ticket = await this.ticketRepository.findOne({
+      where: { id: ticketId },
+    });
+
+    if (
+      !ticket ||
+      !ticket.userSignaturePath ||
+      !fs.existsSync(ticket.userSignaturePath)
+    ) {
+      throw new NotFoundException(
+        `User signature for ticket ${ticketId} not found`,
+      );
+    }
+    return fs.createReadStream(ticket.userSignaturePath);
+  }
+
+  async approveTicket(ticketId: number, supervisorId: number) {
+    const ticket = await this.ticketRepository.findOne({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Ticket with id ${ticketId} not found`);
+    }
+
+    const supervisor = await this.userService.findOne(supervisorId);
+    if (!supervisor) {
+      throw new NotFoundException(`Supervisor with id ${supervisorId} not found`);
+    }
+
+    ticket.approvedById = supervisorId;
+    await this.ticketRepository.save(ticket);
+    return {
+      id: ticket.id,
+      approvedById: ticket.approvedById,
+      message: 'Ticket approved successfully',
+    };
   }
 
   async uploadTicketPdf(ticketId: number, file: Express.Multer.File) {
@@ -791,18 +994,56 @@ export class TicketsService {
     });
 
     if (!ticket) {
-      fs.unlink(file.path, () => { });
+      if (fs.existsSync(file.path)) {
+        fs.unlink(file.path, () => { });
+      }
       throw new NotFoundException(`Ticket with id ${ticketId} not found`);
     }
-    if (ticket.filePath && fs.existsSync(ticket.filePath)) {
+
+    const dir = path.join('storages', 'tickets');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    const uniqueSuffix = `${dayjs(Date.now()).format('YYYYMMMDD')}-${Math.round(Math.random() * 1000)}`;
+    const fileName = `ticket-${ticket.fullNumber || ticket.id}-${uniqueSuffix}${path.extname(file.originalname) || '.pdf'}`;
+    const newPath = path.join(dir, fileName);
+
+    if (fs.existsSync(file.path)) {
+      fs.renameSync(file.path, newPath);
+    }
+
+    if (ticket.filePath && ticket.filePath !== newPath && fs.existsSync(ticket.filePath)) {
       fs.unlink(ticket.filePath, () => { });
     }
 
-    ticket.filePath = file.path;
+    ticket.filePath = newPath;
     await this.ticketRepository.save(ticket);
     return {
       id: ticket.id,
       filePath: ticket.filePath,
+    };
+  }
+
+  async deleteTicketPdf(ticketId: number) {
+    const ticket = await this.ticketRepository.findOne({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Ticket with id ${ticketId} not found`);
+    }
+
+    if (ticket.filePath && fs.existsSync(ticket.filePath)) {
+      fs.unlink(ticket.filePath, () => { });
+    }
+
+    ticket.filePath = null;
+    await this.ticketRepository.save(ticket);
+
+    return {
+      id: ticket.id,
+      message: 'Ticket PDF deleted successfully',
     };
   }
 
