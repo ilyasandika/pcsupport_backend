@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateWorkLocationDto } from './dto/create-work-location.dto';
 import { UpdateWorkLocationDto } from './dto/update-work-location.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -52,9 +52,30 @@ export class WorkLocationsService {
     this.workLocationRepository.merge(location, dto);
     return await this.workLocationRepository.save(location);
   }
+
   async remove(id: number) {
-    const location = await this.workLocationRepository.findOneBy({ id });
+    const location = await this.workLocationRepository.findOne({
+      where: { id },
+      relations: {
+        tickets: true,
+        employees: true,
+        users: true,
+        assets: true,
+      },
+    });
     if (!location) throw new NotFoundException('Work Location Not Found');
+
+    const hasTickets = location.tickets && location.tickets.length > 0;
+    const hasEmployees = location.employees && location.employees.length > 0;
+    const hasUsers = location.users && location.users.length > 0;
+    const hasAssets = location.assets && location.assets.length > 0;
+
+    if (hasTickets || hasEmployees || hasUsers || hasAssets) {
+      throw new BadRequestException(
+        'Location cannot be deleted because it is associated with existing tickets, employees, engineers, or assets',
+      );
+    }
+
     return await this.workLocationRepository.delete(id);
   }
 }
