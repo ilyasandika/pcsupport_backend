@@ -23,7 +23,7 @@ import { AssetQueryDto } from './dto/asset-query.dto';
 
 @Controller('assets')
 export class AssetsController {
-  constructor(private readonly assetsService: AssetsService) {}
+  constructor(private readonly assetsService: AssetsService) { }
 
   @Post()
   create(@Body() dto: CreateAssetDto) {
@@ -39,7 +39,7 @@ export class AssetsController {
   findActive() {
     return this.assetsService.findAll({
       status: [AssetStatus.AssignedForBackup, AssetStatus.Assigned],
-    });
+    }, true);
   }
 
   @Get('list/backup')
