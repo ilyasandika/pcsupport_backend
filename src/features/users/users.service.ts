@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -24,10 +25,23 @@ import * as fs from 'fs';
 import * as XLSX from 'xlsx';
 import { RawUserExcelRow } from '../../common/interfaces/raw-user-excel.interface';
 
+import { Ticket } from '../tickets/entities/ticket.entity';
+import { TicketStatus } from '../../common/enums/ticket-status.enum';
+import { LlmService } from '../../common/llm/llm.service';
+import { Between, In } from 'typeorm';
+import { SyncUserTagsDto } from './dto/sync-user-tags.dto';
+import dayjs from 'dayjs';
+import {
+  TagHistoryItem,
+  ReviewHistoryItem,
+} from './interfaces/user-ai-history.interface';
+
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(Ticket) private readonly ticketRepository: Repository<Ticket>,
+    private readonly llmService: LlmService,
   ) { }
 
   async create(dto: CreateUserDto) {
@@ -58,9 +72,16 @@ export class UsersService {
   }
 
   async findAll() {
-    const users = await this.userRepository
+    const { entities, raw } = await this.userRepository
       .createQueryBuilder('users')
       .leftJoinAndSelect('users.workLocation', 'workLocation')
+      .addSelect(
+        `(EXISTS (
+          SELECT 1 FROM tickets t 
+          WHERE t.engineer_id = users.id OR t.created_by_user_id = users.id
+        ))`,
+        'has_ticket',
+      )
       .addSelect(
         `CASE users.role
           WHEN '${Role.Admin}' THEN 1
@@ -72,8 +93,23 @@ export class UsersService {
         'role_priority',
       )
       .orderBy('role_priority', 'ASC')
-      .getMany();
-    return plainToInstance(DetailUserResponseDto, users);
+      .getRawAndEntities();
+
+    const usersWithFlag = entities.map((user, index) => {
+      const rawVal = raw[index]?.has_ticket;
+      const isUserHasTicket =
+        rawVal === true ||
+        rawVal === '1' ||
+        rawVal === 1 ||
+        rawVal === 'true';
+
+      return {
+        ...user,
+        isUserHasTicket,
+      };
+    });
+
+    return plainToInstance(DetailUserResponseDto, usersWithFlag);
   }
 
   async findEngineers() {
@@ -102,6 +138,13 @@ export class UsersService {
     return plainToInstance(DetailUserResponseDto, engineers);
   }
 
+  async findActiveUser(id: number) {
+    return await this.userRepository.findOne({
+      where: { id },
+      select: ['id', 'username', 'fullName', 'role', 'active'],
+    });
+  }
+
   async findOne(id: number) {
     const user = await this.userRepository.findOne({
       where: { id },
@@ -123,13 +166,40 @@ export class UsersService {
       throw new NotFoundException(`user does not exist`);
     }
 
-    return plainToInstance(DetailUserResponseDto, user);
+    const isUserHasTicket = Boolean(user.tickets && user.tickets.length > 0);
+
+    return plainToInstance(DetailUserResponseDto, {
+      ...user,
+      isUserHasTicket,
+    });
   }
 
   async update(id: number, dto: UpdateUserDto) {
     const user = await this.findOrThrow(id);
     this.userRepository.merge(user, dto);
     return await this.userRepository.save(user);
+  }
+
+  async toggleStatus(id: number) {
+    const user = await this.findOrThrow(id);
+    user.active = !user.active;
+    const updatedUser = await this.userRepository.save(user);
+    return plainToInstance(DetailUserResponseDto, updatedUser);
+  }
+
+  async setActiveStatus(id: number, active: boolean) {
+    const user = await this.findOrThrow(id);
+    user.active = active;
+    const updatedUser = await this.userRepository.save(user);
+    return plainToInstance(DetailUserResponseDto, updatedUser);
+  }
+
+  async activateUser(id: number) {
+    return await this.setActiveStatus(id, true);
+  }
+
+  async deactivateUser(id: number) {
+    return await this.setActiveStatus(id, false);
   }
 
   async updatePassword(id: number, dto: UpdateUserPasswordDto) {
@@ -166,7 +236,7 @@ export class UsersService {
   async findForLogin(username: string): Promise<UserForLogin> {
     const user = await this.userRepository.findOne({
       where: [{ username }],
-      select: ['id', 'username', 'email', 'password', 'role', 'fullName'],
+      select: ['id', 'username', 'email', 'password', 'role', 'fullName', 'active'],
     });
     if (!user) {
       return null;
@@ -287,5 +357,176 @@ export class UsersService {
       skipUpdateIfNoValuesChanged: true,
       upsertType: 'on-conflict-do-update',
     });
+  }
+
+  async syncUserTags(id: number, dto?: SyncUserTagsDto) {
+    const user = await this.findOrThrow(id);
+
+    let periodLabel: string | undefined = undefined;
+    let dateFilter: any = undefined;
+
+    if (dto?.period) {
+      const parsed = dayjs(dto.period, ['YYYY-MM', 'YYYY-M']);
+      if (parsed.isValid()) {
+        const start = parsed.startOf('month').toDate();
+        const end = parsed.endOf('month').toDate();
+        dateFilter = Between(start, end);
+        periodLabel = parsed.format('MMMM YYYY');
+      }
+    } else if (dto?.year && dto?.month) {
+      const parsed = dayjs(`${dto.year}-${dto.month}`, 'YYYY-M');
+      if (parsed.isValid()) {
+        const start = parsed.startOf('month').toDate();
+        const end = parsed.endOf('month').toDate();
+        dateFilter = Between(start, end);
+        periodLabel = parsed.format('MMMM YYYY');
+      }
+    }
+
+    const whereResolved: any = {
+      engineerId: id,
+      status: In([
+        TicketStatus.Resolved,
+        TicketStatus.ClosedRemote,
+        TicketStatus.ClosedVisit,
+        TicketStatus.ClosedOnsite,
+      ]),
+    };
+
+    const whereFallback: any = {
+      engineerId: id,
+    };
+
+    if (dateFilter) {
+      whereResolved.createdAt = dateFilter;
+      whereFallback.createdAt = dateFilter;
+    }
+
+    const tickets = await this.ticketRepository.find({
+      where: whereResolved,
+      relations: {
+        asset: {
+          category: true,
+        },
+        slaPolicy: true,
+      },
+      order: {
+        solvedAt: 'DESC',
+        createdAt: 'DESC',
+      },
+      take: dateFilter ? 100 : 30,
+    });
+
+    const ticketList =
+      tickets.length > 0
+        ? tickets
+        : await this.ticketRepository.find({
+            where: whereFallback,
+            relations: {
+              asset: {
+                category: true,
+              },
+              slaPolicy: true,
+            },
+            order: { createdAt: 'DESC' },
+            take: dateFilter ? 100 : 30,
+          });
+
+    if (ticketList.length === 0) {
+      throw new BadRequestException(
+        dateFilter
+          ? `Tidak ada riwayat tiket untuk engineer pada periode ${periodLabel || 'tersebut'}.`
+          : 'User does not have any ticket history to analyze tags.',
+      );
+    }
+
+    const payload = ticketList.map((t) => {
+      let remainingSlaRatio: number | null = null;
+      if (t.slaPolicy && Number(t.slaPolicy.resolutionTimeSeconds) > 0) {
+        const startTime = t.startAt
+          ? new Date(t.startAt).getTime()
+          : new Date(t.createdAt).getTime();
+        const endTime = t.solvedAt
+          ? new Date(t.solvedAt).getTime()
+          : new Date(t.updatedAt).getTime();
+
+        if (startTime && endTime && endTime >= startTime) {
+          const actualDurationSeconds = (endTime - startTime) / 1000;
+          const targetResolutionSeconds = Number(
+            t.slaPolicy.resolutionTimeSeconds,
+          );
+          const ratio =
+            (targetResolutionSeconds - actualDurationSeconds) /
+            targetResolutionSeconds;
+          remainingSlaRatio = Number(ratio.toFixed(2));
+        }
+      }
+
+      return {
+        problem: t.problem,
+        category: t.asset?.category?.name || '',
+        solution: t.solution || t.remarks || '',
+        remarks: t.remarks || '',
+        status: t.status,
+        slaRemainingRatio: remainingSlaRatio,
+      };
+    });
+
+    const analysis = await this.llmService.generateEngineerAnalysis(
+      id,
+      JSON.stringify(payload, null, 2),
+      periodLabel,
+    );
+
+    const periodKey = dto?.period
+      ? dto.period
+      : dto?.year && dto?.month
+        ? `${dto.year}-${String(dto.month).padStart(2, '0')}`
+        : 'all-time';
+
+    const nowIso = new Date().toISOString();
+
+    const currentTagHistory: TagHistoryItem[] = user.tagHistory || [];
+    const existingTagIdx = currentTagHistory.findIndex(
+      (item) => item.period === periodKey,
+    );
+    const newTagItem: TagHistoryItem = {
+      period: periodKey,
+      periodLabel: periodLabel || 'Semua Waktu',
+      tags: analysis.tags,
+      updatedAt: nowIso,
+    };
+
+    if (existingTagIdx >= 0) {
+      currentTagHistory[existingTagIdx] = newTagItem;
+    } else {
+      currentTagHistory.unshift(newTagItem);
+    }
+
+    const currentReviewHistory: ReviewHistoryItem[] = user.reviewHistory || [];
+    const existingReviewIdx = currentReviewHistory.findIndex(
+      (item) => item.period === periodKey,
+    );
+    const newReviewItem: ReviewHistoryItem = {
+      period: periodKey,
+      periodLabel: periodLabel || 'Semua Waktu',
+      review: analysis.review,
+      updatedAt: nowIso,
+    };
+
+    if (existingReviewIdx >= 0) {
+      currentReviewHistory[existingReviewIdx] = newReviewItem;
+    } else {
+      currentReviewHistory.unshift(newReviewItem);
+    }
+
+    user.tags = analysis.tags;
+    user.review = analysis.review;
+    user.tagHistory = currentTagHistory;
+    user.reviewHistory = currentReviewHistory;
+    user.tagsUpdatedAt = new Date();
+    const updatedUser = await this.userRepository.save(user);
+
+    return plainToInstance(DetailUserResponseDto, updatedUser);
   }
 }
