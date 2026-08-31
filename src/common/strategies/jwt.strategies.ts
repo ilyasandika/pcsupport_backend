@@ -20,15 +20,15 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: JwtPayload) {
-    const user = await this.userService.findOne(payload.sub as number);
-    if (!user) {
-      throw new UnauthorizedException();
+    const user = await this.userService.findActiveUser(payload.sub as number);
+    if (!user || !user.active) {
+      throw new UnauthorizedException('User account is inactive or not found');
     }
     return {
-      sub: payload.sub,
-      username: payload.username,
-      fullName: payload.fullName,
-      role: payload.role,
+      sub: user.id,
+      username: user.username,
+      fullName: user.fullName,
+      role: user.role,
     };
   }
 }
