@@ -5,4 +5,5 @@ export type UserForLogin = {
   fullName: string;
   password: string;
   role: string;
+  active: boolean;
 } | null;
