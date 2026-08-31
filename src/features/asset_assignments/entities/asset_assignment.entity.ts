@@ -11,6 +11,7 @@ import {
 import { Employee } from '../../employees/entities/employee.entity';
 import { Asset } from '../../assets/entities/asset.entity';
 import { User } from '../../users/entities/user.entity';
+import { Ticket } from '../../tickets/entities/ticket.entity';
 
 @Entity({
   name: 'asset_assignments',
@@ -29,6 +30,26 @@ export class AssetAssignment {
   @ManyToOne(() => Asset, (asset) => asset.assetAssignments)
   @JoinColumn({ name: 'asset_tag' })
   asset: Asset;
+
+  @Column({
+    name: 'assign_full_ticket_number',
+    nullable: true,
+  })
+  assignFullTicketNumber?: string | null;
+
+  @ManyToOne(() => Ticket)
+  @JoinColumn({ name: 'assign_full_ticket_number', referencedColumnName: 'fullNumber' })
+  assignTicket?: Ticket | null;
+
+  @Column({
+    name: 'return_full_ticket_number',
+    nullable: true,
+  })
+  returnFullTicketNumber?: string | null;
+
+  @ManyToOne(() => Ticket)
+  @JoinColumn({ name: 'return_full_ticket_number', referencedColumnName: 'fullNumber' })
+  returnTicket?: Ticket | null;
 
   @Column({
     name: 'pic_employee_nik',
@@ -90,14 +111,28 @@ export class AssetAssignment {
     nullable: true,
     type: 'text',
   })
-  assignFilePath?: string;
+  assignFilePath?: string | null;
 
   @Column({
     name: 'return_file_path',
     nullable: true,
     type: 'text',
   })
-  returnFilePath?: string;
+  returnFilePath?: string | null;
+
+  @Column({
+    name: 'assign_user_signature_path',
+    nullable: true,
+    type: 'text',
+  })
+  assignUserSignaturePath?: string | null;
+
+  @Column({
+    name: 'return_user_signature_path',
+    nullable: true,
+    type: 'text',
+  })
+  returnUserSignaturePath?: string | null;
 
   @Column({
     nullable: true,
