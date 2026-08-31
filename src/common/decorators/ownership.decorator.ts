@@ -24,7 +24,7 @@ export interface OwnershipOptions {
   /**
    * List of Roles allowed to skip ownership check (Default: [Role.Admin])
    */
-  allowedRoles?: (Role | string)[];
+  bypassRoles?: (Role | string)[];
 
   /**
    * URL parameter name storing the entity ID (Default: 'id')

@@ -94,8 +94,8 @@ export class TicketsController {
   @UseGuards(OwnershipGuard)
   @CheckOwnership({
     service: TicketsService,
-    ownershipField: 'assignedEngineerId',
-    allowedRoles: [Role.Admin],
+    ownershipField: 'engineerId',
+    bypassRoles: [Role.Admin],
     paramKey: 'id',
   })
   update(@Param('id') id: string, @Body() dto: UpdateTicketDto) {

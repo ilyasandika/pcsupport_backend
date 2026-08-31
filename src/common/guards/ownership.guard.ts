@@ -35,7 +35,7 @@ export class OwnershipGuard implements CanActivate {
     }
 
     const userField = options.userField || 'sub';
-    const allowedRoles = options.allowedRoles || [Role.Admin];
+    const allowedRoles = options.bypassRoles || [Role.Admin];
     const paramKey = options.paramKey || 'id';
 
     // Check if user role is allowed to skip ownership check
