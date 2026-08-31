@@ -10,14 +10,16 @@ import {
   Param,
   ParseIntPipe,
   Delete,
+  Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TemplatesService } from './templates.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
+import type { Response } from 'express';
 
 @Controller('templates')
 export class TemplatesController {
-  constructor(private readonly templatesService: TemplatesService) {}
+  constructor(private readonly templatesService: TemplatesService) { }
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
@@ -50,6 +52,16 @@ export class TemplatesController {
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.templatesService.findOne(id);
+  }
+
+  @Get(':id/download')
+  async download(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+    const { stream, fileName } = await this.templatesService.getTemplateFileStream(id);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+    });
+    stream.pipe(res);
   }
 
   @Delete(':id')
