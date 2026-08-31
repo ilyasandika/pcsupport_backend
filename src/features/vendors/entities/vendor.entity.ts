@@ -6,9 +6,13 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { VendorSupportContact } from '../../vendor_support_contacts/entities/vendor_support_contact.entity';
 import { Project } from '../../projects/entities/project.entity';
 import { ExternalTicket } from '../../external_tickets/entities/external_ticket.entity';
+
+export interface VendorContact {
+  type: string;
+  value: string;
+}
 
 @Entity({
   name: 'vendors',
@@ -19,6 +23,9 @@ export class Vendor {
 
   @Column()
   name: string;
+
+  @Column('json', { nullable: true })
+  contacts: VendorContact[];
 
   @CreateDateColumn({
     name: 'created_at',
@@ -33,12 +40,6 @@ export class Vendor {
   updatedAt: Date;
 
   // relations
-  @OneToMany(
-    () => VendorSupportContact,
-    (vendorSupportContact) => vendorSupportContact.vendor,
-  )
-  contacts: VendorSupportContact[];
-
   @OneToMany(() => ExternalTicket, (externalTicket) => externalTicket.vendor)
   externalTickets: ExternalTicket[];
 
