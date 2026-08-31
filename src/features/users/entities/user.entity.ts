@@ -14,6 +14,10 @@ import { Exclude } from 'class-transformer';
 import { Ticket } from '../../tickets/entities/ticket.entity';
 import { WorkLocation } from '../../work-locations/entities/work-location.entity';
 import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
+import {
+  TagHistoryItem,
+  ReviewHistoryItem,
+} from '../interfaces/user-ai-history.interface';
 
 @Entity({
   name: 'users',
@@ -63,6 +67,39 @@ export class User {
     type: 'varchar',
   })
   signaturePath?: string;
+
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+  })
+  tags?: string[];
+
+  @Column({
+    name: 'tags_updated_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  tagsUpdatedAt?: Date;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  review?: string;
+
+  @Column({
+    name: 'tag_history',
+    type: 'jsonb',
+    nullable: true,
+  })
+  tagHistory?: TagHistoryItem[];
+
+  @Column({
+    name: 'review_history',
+    type: 'jsonb',
+    nullable: true,
+  })
+  reviewHistory?: ReviewHistoryItem[];
 
   @Column({
     default: true,
