@@ -4,6 +4,11 @@ import { WorkLocationResponseDto } from '../../work-locations/dto/work-location-
 import { TicketResponseDtoForAsset } from '../../tickets/dto/ticket-response.dto';
 import { PickType } from '@nestjs/mapped-types';
 
+import {
+  TagHistoryItem,
+  ReviewHistoryItem,
+} from '../interfaces/user-ai-history.interface';
+
 export class DetailUserResponseDto {
   @Expose()
   id: number;
@@ -43,11 +48,36 @@ export class DetailUserResponseDto {
 
   @Expose()
   active: boolean;
+
+  @Expose()
+  tags?: string[];
+
+  @Expose()
+  tagsUpdatedAt?: Date;
+
+  @Expose()
+  review?: string;
+
+  @Expose()
+  tagHistory?: TagHistoryItem[];
+
+  @Expose()
+  reviewHistory?: ReviewHistoryItem[];
+
+  @Expose()
+  isUserHasTicket?: boolean;
 }
 
 export class UserResponseDto extends PickType(DetailUserResponseDto, [
   'id',
   'username',
   'fullName',
+  'nik',
   'role',
+  'signaturePath',
+  'tags',
+  'tagsUpdatedAt',
+  'review',
+  'tagHistory',
+  'reviewHistory',
 ] as const) {}
