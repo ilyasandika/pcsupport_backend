@@ -61,7 +61,7 @@ export class WorkLocation {
   tickets: Ticket[];
 
   @OneToMany(() => User, (user) => user.workLocation)
-  users: User;
+  users: User[];
 
   @OneToMany(() => Employee, (employee) => employee.workLocation)
   employees: Employee[];
