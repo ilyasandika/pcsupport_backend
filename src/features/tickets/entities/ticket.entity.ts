@@ -9,6 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { TicketStatus } from '../../../common/enums/ticket-status.enum';
+import { AssignmentType } from '../../../common/enums/assignment-type.enum';
 import { Asset } from '../../assets/entities/asset.entity';
 import { Employee } from '../../employees/entities/employee.entity';
 import { User } from '../../users/entities/user.entity';
@@ -93,6 +94,16 @@ export class Ticket {
   @JoinColumn({ name: 'created_by_user_id' })
   createdBy: User;
 
+  @Column({
+    name: 'approved_by_id',
+    nullable: true,
+  })
+  approvedById?: number | null;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'approved_by_id' })
+  approvedBy?: User;
+
   @Column()
   problem: string;
 
@@ -153,10 +164,32 @@ export class Ticket {
   remarks?: string;
 
   @Column({
+    type: 'varchar',
     nullable: true,
     name: 'file_path',
   })
-  filePath?: string;
+  filePath?: string | null;
+
+  @Column({
+    type: 'varchar',
+    nullable: true,
+    name: 'user_signature_path',
+  })
+  userSignaturePath?: string | null;
+
+  @Column({
+    name: 'is_asset_assignment',
+    default: false,
+  })
+  isAssetAssignment: boolean;
+
+  @Column({
+    name: 'assignment_type',
+    type: 'enum',
+    enum: AssignmentType,
+    nullable: true,
+  })
+  assignmentType?: AssignmentType | null;
 
   @CreateDateColumn({
     name: 'created_at',
