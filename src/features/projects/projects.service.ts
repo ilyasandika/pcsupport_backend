@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -47,8 +47,16 @@ export class ProjectsService {
   }
 
   async remove(name: string) {
-    const project = await this.projectRepository.findOneBy({ name });
+    const project = await this.projectRepository.findOne({
+      where: { name },
+      relations: { assets: true },
+    });
     if (!project) throw new NotFoundException('not found');
+    if (project.assets && project.assets.length > 0) {
+      throw new BadRequestException(
+        'Project cannot be deleted because it is associated with one or more assets',
+      );
+    }
     return await this.projectRepository.delete(project.name);
   }
 }
