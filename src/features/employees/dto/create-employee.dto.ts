@@ -1,6 +1,6 @@
 import {
-
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
@@ -11,6 +11,7 @@ export class CreateEmployeeDto {
   nik: string;
 
   @IsOptional()
+  @IsString()
   nik2?: string;
 
   @IsNotEmpty()
@@ -52,6 +53,17 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsString()
   department?: string;
+
+  @IsNotEmpty({
+    message: 'Work Location is required',
+  })
+  @IsNumber(
+    {},
+    {
+      message: 'Work Location must be a valid location ID number',
+    },
+  )
+  workLocationId: number;
 
   @IsString()
   @IsOptional()
