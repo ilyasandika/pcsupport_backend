@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SlaPolicy } from './entities/sla-policy.entity';
@@ -43,7 +43,16 @@ export class SlaPoliciesService {
   }
 
   async remove(id: number) {
-    const policy = await this.findOne(id);
+    const policy = await this.slaPolicyRepository.findOne({
+      where: { id },
+      relations: { tickets: true },
+    });
+    if (!policy) throw new NotFoundException(`SLA Policy not found`);
+    if (policy.tickets && policy.tickets.length > 0) {
+      throw new BadRequestException(
+        'SLA Policy cannot be deleted because it is associated with one or more tickets',
+      );
+    }
     await this.slaPolicyRepository.remove(policy);
     return { message: `SLA Policy Deleted` };
   }
