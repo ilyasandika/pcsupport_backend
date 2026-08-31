@@ -10,9 +10,13 @@ import {
 } from '../../common/const/directory.const';
 import { extname } from 'path';
 
+import { Ticket } from '../tickets/entities/ticket.entity';
+import { LlmModule } from '../../common/llm/llm.module';
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Ticket]),
+    LlmModule,
     MulterModule.register({
       storage: diskStorage({
         destination: SIGNATURE_UPLOAD_DIR,
