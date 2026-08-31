@@ -27,14 +27,16 @@ import { Role } from '../../common/enums/role.enum';
 import { GetTicketTrendDto } from './dto/trend-ticket.dto';
 import express from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { pdfMulterOptions } from '../../config/multer.config';
+import { pdfMulterOptions, signatureMulterOptions } from '../../config/multer.config';
 import { CreateTicketPdfDto } from './dto/create-ticket-pdf.dto';
 import { TicketQueryDto } from './dto/ticket-query.dto';
+import { OwnershipGuard } from 'src/common/guards/ownership.guard';
+import { CheckOwnership } from 'src/common/decorators/ownership.decorator';
 
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TicketsController {
-  constructor(private readonly ticketsService: TicketsService) {}
+  constructor(private readonly ticketsService: TicketsService) { }
 
   @Post()
   @Roles(Role.Helpdesk, Role.Admin, Role.Engineer, Role.Supervisor)
@@ -89,9 +91,17 @@ export class TicketsController {
   }
 
   @Patch(':id')
+  @UseGuards(OwnershipGuard)
+  @CheckOwnership({
+    service: TicketsService,
+    ownershipField: 'assignedEngineerId',
+    allowedRoles: [Role.Admin],
+    paramKey: 'id',
+  })
   update(@Param('id') id: string, @Body() dto: UpdateTicketDto) {
     return this.ticketsService.update(+id, dto);
   }
+
 
   @Delete(':id/hard')
   remove(@Param('id') id: string) {
@@ -129,6 +139,47 @@ export class TicketsController {
     file: Express.Multer.File,
   ) {
     return this.ticketsService.uploadTicketPdf(+id, file);
+  }
+
+  @Delete(':id/pdf')
+  async deleteTicketPdf(@Param('id') id: string) {
+    return this.ticketsService.deleteTicketPdf(+id);
+  }
+
+  @Post(':id/user-signature')
+  @UseInterceptors(FileInterceptor('file', signatureMulterOptions))
+  async uploadUserSignature(
+    @Param('id') id: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: /^image\/(png|jpeg|jpg)$/,
+          skipMagicNumbersValidation: true,
+        })
+        .addMaxSizeValidator({ maxSize: 2 * 1024 * 1024 })
+        .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.ticketsService.uploadUserSignature(+id, file);
+  }
+
+  @Get(':id/user-signature')
+  async getUserSignature(
+    @Param('id') id: string,
+    @Res() res: express.Response,
+  ) {
+    const fileStream = await this.ticketsService.getUserSignatureStream(+id);
+    res.setHeader('Content-Type', 'image/png');
+    fileStream.pipe(res);
+  }
+
+  @Post(':id/approve')
+  async approveTicket(
+    @Param('id') id: string,
+    @Body('supervisorId') supervisorId: number,
+  ) {
+    return this.ticketsService.approveTicket(+id, supervisorId);
   }
 
   @Get(':id/solved/pdf')
