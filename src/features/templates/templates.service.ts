@@ -5,12 +5,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { promises as fs } from 'fs';
+import { promises as fs, createReadStream } from 'fs';
 import { Template, TemplateType } from './entities/template.entity';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { plainToInstance } from 'class-transformer';
 import { TemplateResponseDto } from './dto/template-response.dto';
-import { extname, join } from 'path';
+import { extname, join, basename } from 'path';
 import { TEMPLATE_UPLOAD_DIR } from '../../common/const/directory.const';
 import { rename } from 'node:fs';
 
@@ -93,6 +93,20 @@ export class TemplatesService {
       throw new NotFoundException(`Template with type ${type} not found`);
     }
     return template;
+  }
+
+  async getTemplateFileStream(id: number) {
+    const template = await this.findOne(id);
+    try {
+      await fs.access(template.filePath);
+      const fileName = basename(template.filePath);
+      return {
+        stream: createReadStream(template.filePath),
+        fileName: fileName,
+      };
+    } catch {
+      throw new NotFoundException(`File for template id ${id} not found on disk`);
+    }
   }
 
   async remove(id: number): Promise<{ deleted: boolean }> {
