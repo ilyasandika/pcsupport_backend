@@ -20,6 +20,7 @@ import { AssetQueryDto } from './dto/asset-query.dto';
 import * as XLSX from 'xlsx';
 import { RawAssetExcelRow } from '../../common/interfaces/raw-asset-excel.interface';
 import { AssetAssignment } from '../asset_assignments/entities/asset_assignment.entity';
+import { Ticket } from '../tickets/entities/ticket.entity';
 import { paginateQb } from '../../common/utils/paginate.util';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 
@@ -34,6 +35,9 @@ export class AssetsService {
 
     @InjectRepository(AssetAssignment)
     private readonly assetAssignmentRepository: Repository<AssetAssignment>,
+
+    @InjectRepository(Ticket)
+    private readonly ticketRepository: Repository<Ticket>,
 
     private readonly assetCategoryService: AssetCategoriesService,
     private readonly workLocationsService: WorkLocationsService,
@@ -72,6 +76,7 @@ export class AssetsService {
 
   async findAll(
     query: AssetQueryDto,
+    isList: boolean = false,
   ): Promise<PaginatedResponseDto<AssetResponseDto>> {
     const qb = this.assetRepository
       .createQueryBuilder('asset')
@@ -231,6 +236,11 @@ export class AssetsService {
     qb.addOrderBy('tag_is_number', 'ASC');
     qb.addOrderBy('tag_number_value', 'ASC');
     qb.addOrderBy('asset.assetTag', 'DESC');
+
+
+    if (isList) {
+      query.limit = 10
+    }
 
     const { data: assets, meta } = await paginateQb(qb, query);
 
@@ -406,6 +416,21 @@ export class AssetsService {
   async remove(assetTag: string) {
     const asset = await this.assetRepository.findOneBy({ assetTag });
     if (!asset) throw new NotFoundException('asset not found');
+
+    const hasAssignment = await this.assetAssignmentRepository.findOne({
+      where: [{ assetTag }, { backupForAssetTag: assetTag }],
+    });
+
+    const hasTicket = await this.ticketRepository.findOne({
+      where: [{ assetTag }, { backupAssetTag: assetTag }],
+    });
+
+    if (hasAssignment || hasTicket) {
+      throw new BadRequestException(
+        'Asset cannot be deleted because it is associated with existing assignments or tickets',
+      );
+    }
+
     return await this.assetRepository.delete(assetTag);
   }
 
