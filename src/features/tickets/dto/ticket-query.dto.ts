@@ -1,4 +1,3 @@
-// tickets/dto/ticket-query.dto.ts
 import { IsArray, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import { TicketStatus } from '../../../common/enums/ticket-status.enum';
@@ -19,11 +18,12 @@ export class TicketQueryDto extends PaginationQueryDto {
 
   @IsOptional()
   @IsArray()
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   @Transform(({ value }) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     if (Array.isArray(value)) return value;
     if (typeof value === 'string' && value.includes(','))
       return value.split(',').map((v) => v.trim());
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return [value];
   })
   category?: string[];
@@ -52,7 +52,9 @@ export class TicketQueryDto extends PaginationQueryDto {
   @IsString()
   approvedByName?: string;
 
-
+  @IsOptional()
+  @IsString()
+  contact?: string;
 
   @IsOptional()
   @IsArray()
