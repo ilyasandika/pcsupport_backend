@@ -13,7 +13,6 @@ import {
   UploadedFile,
   ParseFilePipeBuilder,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -27,7 +26,10 @@ import { Role } from '../../common/enums/role.enum';
 import { GetTicketTrendDto } from './dto/trend-ticket.dto';
 import express from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { pdfMulterOptions, signatureMulterOptions } from '../../config/multer.config';
+import {
+  pdfMulterOptions,
+  signatureMulterOptions,
+} from '../../config/multer.config';
 import { CreateTicketPdfDto } from './dto/create-ticket-pdf.dto';
 import { TicketQueryDto } from './dto/ticket-query.dto';
 import { OwnershipGuard } from 'src/common/guards/ownership.guard';
@@ -36,31 +38,22 @@ import { CheckOwnership } from 'src/common/decorators/ownership.decorator';
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TicketsController {
-  constructor(private readonly ticketsService: TicketsService) { }
+  constructor(private readonly ticketsService: TicketsService) {}
 
   @Post()
   @Roles(Role.Helpdesk, Role.Admin, Role.Engineer, Role.Supervisor)
-  async create(
-    @Body() dto: CreateTicketDto,
-    @GetUser() user: JwtPayload,
-  ) {
+  async create(@Body() dto: CreateTicketDto, @GetUser() user: JwtPayload) {
     return await this.ticketsService.create(dto, user.sub as number);
   }
 
   @Patch('claim/:id')
   @Roles(Role.Engineer, Role.Admin)
-  async claim(
-    @Param('id') id: string,
-    @GetUser() user: JwtPayload,
-  ) {
+  async claim(@Param('id') id: string, @GetUser() user: JwtPayload) {
     return await this.ticketsService.claimTicket(+id, user.sub as number);
   }
 
   @Get()
-  async findAll(
-    @Query() query: TicketQueryDto,
-    @GetUser() user: JwtPayload,
-  ) {
+  async findAll(@Query() query: TicketQueryDto, @GetUser() user: JwtPayload) {
     return await this.ticketsService.findAll(query, user);
   }
 
@@ -83,10 +76,7 @@ export class TicketsController {
   }
 
   @Get(':id')
-  findOne(
-    @Param('id') id: string,
-    @GetUser() user: JwtPayload,
-  ) {
+  findOne(@Param('id') id: string, @GetUser() user: JwtPayload) {
     return this.ticketsService.findOne(+id, user);
   }
 
@@ -95,14 +85,14 @@ export class TicketsController {
   @CheckOwnership({
     service: TicketsService,
     ownershipField: 'engineerId',
-    bypassRoles: [Role.Admin],
+    bypassRoles: [Role.Admin, Role.Supervisor, Role.Helpdesk],
     paramKey: 'id',
   })
   update(@Param('id') id: string, @Body() dto: UpdateTicketDto) {
     return this.ticketsService.update(+id, dto);
   }
 
-
+  @Roles(Role.Admin, Role.Helpdesk, Role.Supervisor)
   @Delete(':id/hard')
   remove(@Param('id') id: string) {
     return this.ticketsService.hardRemove(+id);
@@ -114,10 +104,7 @@ export class TicketsController {
     @Body() dto: CreateTicketPdfDto,
     @Res() res: express.Response,
   ) {
-    const pdfBuffer = await this.ticketsService.generatePdf(
-      +id,
-      dto,
-    );
+    const pdfBuffer = await this.ticketsService.generatePdf(+id, dto);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="ticket-${id}.pdf"`);
     res.send(pdfBuffer);
@@ -213,6 +200,9 @@ export class TicketsController {
     file: Express.Multer.File,
     @GetUser() user: JwtPayload,
   ) {
-    return await this.ticketsService.importExcel(file.buffer, user.sub as number);
+    return await this.ticketsService.importExcel(
+      file.buffer,
+      user.sub as number,
+    );
   }
 }
