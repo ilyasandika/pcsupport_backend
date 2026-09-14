@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   forwardRef,
   HttpException,
   Inject,
@@ -47,15 +46,12 @@ import { paginateQb } from '../../common/utils/paginate.util';
 import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { Role } from '../../common/enums/role.enum';
 import { SlaPoliciesService } from '../sla-policies/sla-policies.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AssetsService } from '../assets/assets.service';
-import { AssetStatus } from '../assets/entities/asset.entity';
 import { Employee } from '../employees/entities/employee.entity';
 import { TicketSnapshot } from './interfaces/ticket-snapshot.interface';
 import * as XLSX from 'xlsx';
 import { WorkLocationsService } from '../work-locations/work-locations.service';
 import { RawTicketExcelRow } from '../../common/interfaces/raw-ticket-excel.interface';
-import { raw } from 'express';
 import dayjs from 'dayjs';
 
 @Injectable()
@@ -71,7 +67,7 @@ export class TicketsService {
     @Inject(forwardRef(() => AssetAssignmentsService))
     private readonly assetAssignmentService: AssetAssignmentsService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   async create(
     dto: CreateTicketDto,
@@ -112,7 +108,6 @@ export class TicketsService {
           order: { sequenceNumber: 'DESC' },
           lock: { mode: 'pessimistic_write' },
         });
-
         nextNumber = (latestTicket?.sequenceNumber ?? 0) + 1;
         fullNumber = this.getFullNumber(nextNumber, dto.fullNumberTemplate);
       }
@@ -214,8 +209,8 @@ export class TicketsService {
   private getFullNumber(nextNumber: number, template?: string): string {
     return template
       ? Mustache.render(template, {
-        sequenceNumber: nextNumber,
-      })
+          sequenceNumber: nextNumber,
+        })
       : `${nextNumber}`;
   }
 
@@ -224,7 +219,6 @@ export class TicketsService {
     user: JwtPayload,
     forDashboard: boolean = false,
   ): Promise<PaginatedResponseDto<TicketResponseDto>> {
-    Logger.log(query.employee, "TEST");
     const qb = this.ticketRepository
       .createQueryBuilder('ticket')
       .leftJoinAndSelect('ticket.asset', 'asset')
@@ -313,6 +307,11 @@ export class TicketsService {
         createdByName: `%${query.createdByName}%`,
       });
     }
+    if (query.contact) {
+      qb.andWhere('ticket.contact ILike :contact', {
+        contact: `%${query.contact}%`,
+      });
+    }
     if (query.approvedByName) {
       qb.andWhere('approvedBy.fullName ILike :approvedByName', {
         approvedByName: `%${query.approvedByName}%`,
@@ -372,7 +371,9 @@ export class TicketsService {
     }
 
     if (query.hasBackupAsset || query.isNeedBackup) {
-      qb.andWhere('ticket.backupAssetTag IS NOT NULL AND ticket.backupAssetTag != \'\'');
+      qb.andWhere(
+        "ticket.backupAssetTag IS NOT NULL AND ticket.backupAssetTag != ''",
+      );
     }
 
     qb.addSelect(
@@ -385,15 +386,15 @@ export class TicketsService {
       'priority_label',
     );
 
-    // if (user.role === Role.Engineer) {
-    //   qb.andWhere(
-    //     new Brackets((qbSub) => {
-    //       qbSub
-    //         .where('ticket.engineerId = :engineerId', { engineerId: user.sub })
-    //         .orWhere('ticket.engineerId IS NULL');
-    //     }),
-    //   );
-    // }
+    if (user.role === Role.Engineer && forDashboard) {
+      qb.andWhere(
+        new Brackets((qbSub) => {
+          qbSub
+            .where('ticket.engineerId = :engineerId', { engineerId: user.sub })
+            .orWhere('ticket.engineerId IS NULL');
+        }),
+      );
+    }
 
     if (forDashboard) {
       qb.addSelect(
@@ -417,7 +418,10 @@ export class TicketsService {
       qb.addOrderBy('status_label', 'ASC');
     }
 
-    qb.addSelect("CAST(REGEXP_REPLACE(ticket.fullNumber, '[[:alpha:]]', '', 'g') AS INTEGER)", 'extracted_number');
+    qb.addSelect(
+      "CAST(REGEXP_REPLACE(ticket.fullNumber, '[[:alpha:]]', '', 'g') AS INTEGER)",
+      'extracted_number',
+    );
     qb.addOrderBy('extracted_number', 'DESC');
     qb.addOrderBy('ticket.createdAt', 'DESC');
     const { data: tickets, meta } = await paginateQb(qb, query);
@@ -504,7 +508,6 @@ export class TicketsService {
             manager,
           );
           Logger.log('done create asset assignment for backup ');
-
 
           Logger.log('start find latest assignment for backup ');
           const assignment =
@@ -621,7 +624,11 @@ export class TicketsService {
       cancelled: 0,
     };
 
-    type EngineerCount = { engineerId: number | null; engineerName: string; count: number };
+    type EngineerCount = {
+      engineerId: number | null;
+      engineerName: string;
+      count: number;
+    };
 
     const byEngineer: Record<string, EngineerCount[]> = {
       total: [],
@@ -673,10 +680,14 @@ export class TicketsService {
       }
 
       let keyInByEngineer = status as string;
-      if (status === TicketStatus.ClosedRemote) keyInByEngineer = 'closedRemote';
-      else if (status === TicketStatus.ClosedVisit) keyInByEngineer = 'closedVisit';
-      else if (status === TicketStatus.ClosedOnsite) keyInByEngineer = 'closedOnsite';
-      else if (status === TicketStatus.InProgress) keyInByEngineer = 'inProgress';
+      if (status === TicketStatus.ClosedRemote)
+        keyInByEngineer = 'closedRemote';
+      else if (status === TicketStatus.ClosedVisit)
+        keyInByEngineer = 'closedVisit';
+      else if (status === TicketStatus.ClosedOnsite)
+        keyInByEngineer = 'closedOnsite';
+      else if (status === TicketStatus.InProgress)
+        keyInByEngineer = 'inProgress';
 
       if (!byEngineer[keyInByEngineer]) {
         byEngineer[keyInByEngineer] = [];
@@ -788,7 +799,8 @@ export class TicketsService {
         spvNik: supervisor?.nik || '-',
         spvName: supervisor?.fullName || '-',
 
-        workLocation: ticket.location?.name || ticket.employee?.workLocation?.name || '-',
+        workLocation:
+          ticket.location?.name || ticket.employee?.workLocation?.name || '-',
 
         assetName: ticket.asset ? ticket.asset.type : '-',
         assetTag: ticket.asset?.assetTag || '-',
@@ -849,7 +861,9 @@ export class TicketsService {
       );
 
       if (dto?.eSignEngineer && dto?.eSignSupervisor && dto?.eSignUser) {
-        const ticketEntity = await this.ticketRepository.findOneBy({ id: ticketId });
+        const ticketEntity = await this.ticketRepository.findOneBy({
+          id: ticketId,
+        });
         if (ticketEntity) {
           if (ticketEntity.isAssetAssignment) {
             const dir = path.join('storages', 'asset_assignments');
@@ -858,7 +872,7 @@ export class TicketsService {
             }
 
             if (ticketEntity.filePath && fs.existsSync(ticketEntity.filePath)) {
-              fs.unlink(ticketEntity.filePath, () => { });
+              fs.unlink(ticketEntity.filePath, () => {});
             }
 
             const typeName =
@@ -878,17 +892,21 @@ export class TicketsService {
             await this.ticketRepository.save(ticketEntity);
 
             if (ticketEntity.fullNumber) {
-              const matchingAssignment = await this.assetAssignmentService.findByTicketFullNumber(
-                ticketEntity.fullNumber,
-              );
+              const matchingAssignment =
+                await this.assetAssignmentService.findByTicketFullNumber(
+                  ticketEntity.fullNumber,
+                );
               if (matchingAssignment) {
                 const isReturn =
-                  matchingAssignment.returnFullTicketNumber === ticketEntity.fullNumber ||
+                  matchingAssignment.returnFullTicketNumber ===
+                    ticketEntity.fullNumber ||
                   ticketEntity.assignmentType === AssignmentType.Return;
-                const fieldName = isReturn ? 'returnFilePath' : 'assignFilePath';
+                const fieldName = isReturn
+                  ? 'returnFilePath'
+                  : 'assignFilePath';
                 const oldAssPath = matchingAssignment[fieldName];
                 if (oldAssPath && fs.existsSync(oldAssPath)) {
-                  fs.unlink(oldAssPath, () => { });
+                  fs.unlink(oldAssPath, () => {});
                 }
                 await this.assetAssignmentService.updateFilePath(
                   matchingAssignment.id,
@@ -904,7 +922,7 @@ export class TicketsService {
             }
 
             if (ticketEntity.filePath && fs.existsSync(ticketEntity.filePath)) {
-              fs.unlink(ticketEntity.filePath, () => { });
+              fs.unlink(ticketEntity.filePath, () => {});
             }
 
             const uniqueSuffix = `${dayjs(Date.now()).format('YYYYMMMDD')}-${Math.round(Math.random() * 1000)}`;
@@ -932,12 +950,12 @@ export class TicketsService {
 
     if (!ticket) {
       if (fs.existsSync(file.path)) {
-        fs.unlink(file.path, () => { });
+        fs.unlink(file.path, () => {});
       }
       throw new NotFoundException(`Ticket with id ${ticketId} not found`);
     }
     if (ticket.userSignaturePath && fs.existsSync(ticket.userSignaturePath)) {
-      fs.unlink(ticket.userSignaturePath, () => { });
+      fs.unlink(ticket.userSignaturePath, () => {});
     }
 
     ticket.userSignaturePath = file.path;
@@ -976,7 +994,9 @@ export class TicketsService {
 
     const supervisor = await this.userService.findOne(supervisorId);
     if (!supervisor) {
-      throw new NotFoundException(`Supervisor with id ${supervisorId} not found`);
+      throw new NotFoundException(
+        `Supervisor with id ${supervisorId} not found`,
+      );
     }
 
     ticket.approvedById = supervisorId;
@@ -995,7 +1015,7 @@ export class TicketsService {
 
     if (!ticket) {
       if (fs.existsSync(file.path)) {
-        fs.unlink(file.path, () => { });
+        fs.unlink(file.path, () => {});
       }
       throw new NotFoundException(`Ticket with id ${ticketId} not found`);
     }
@@ -1013,8 +1033,12 @@ export class TicketsService {
       fs.renameSync(file.path, newPath);
     }
 
-    if (ticket.filePath && ticket.filePath !== newPath && fs.existsSync(ticket.filePath)) {
-      fs.unlink(ticket.filePath, () => { });
+    if (
+      ticket.filePath &&
+      ticket.filePath !== newPath &&
+      fs.existsSync(ticket.filePath)
+    ) {
+      fs.unlink(ticket.filePath, () => {});
     }
 
     ticket.filePath = newPath;
@@ -1035,7 +1059,7 @@ export class TicketsService {
     }
 
     if (ticket.filePath && fs.existsSync(ticket.filePath)) {
-      fs.unlink(ticket.filePath, () => { });
+      fs.unlink(ticket.filePath, () => {});
     }
 
     ticket.filePath = null;
@@ -1079,136 +1103,144 @@ export class TicketsService {
       const users = await this.userService.findAll();
       const defaultSla = await this.slaPolicyService.findDefault();
 
-      return await this.ticketRepository.manager.transaction(async (manager) => {
-        const ticketsToSave: Ticket[] = [];
+      return await this.ticketRepository.manager.transaction(
+        async (manager) => {
+          const ticketsToSave: Ticket[] = [];
 
-        for (const row of records) {
-          const seqNum =
-            row.no !== undefined && row.no !== '' && !isNaN(Number(row.no))
-              ? Number(row.no)
+          for (const row of records) {
+            const seqNum =
+              row.no !== undefined && row.no !== '' && !isNaN(Number(row.no))
+                ? Number(row.no)
+                : undefined;
+            const fullNum = row.no ? row.no.toString().trim() : undefined;
+
+            const nikStr = row.nik ? row.nik.toString().trim() : undefined;
+            let employee: Employee | null = null;
+            if (nikStr) {
+              employee = await manager.findOne(Employee, {
+                where: { nik: nikStr },
+              });
+            }
+
+            const picVal = row.pic ? row.pic.toString().trim() : undefined;
+            const positionVal = row.position
+              ? row.position.toString().trim()
+              : row.directorate
+                ? row.directorate.toString().trim()
+                : undefined;
+            const deptVal = row.department
+              ? row.department.toString().trim()
               : undefined;
-          const fullNum = row.no ? row.no.toString().trim() : undefined;
+            const divVal = row.division
+              ? row.division.toString().trim()
+              : undefined;
 
-          const nikStr = row.nik ? row.nik.toString().trim() : undefined;
-          let employee: Employee | null = null;
-          if (nikStr) {
-            employee = await manager.findOne(Employee, {
-              where: { nik: nikStr },
+            const snapshot: TicketSnapshot = {
+              userNonEmployee: picVal || undefined,
+              position: positionVal || employee?.position,
+              department: deptVal || employee?.department,
+              division: divVal || employee?.division,
+            };
+
+            let locationId: number | undefined = undefined;
+            if (row.lokasi) {
+              const locStr = row.lokasi.toString().toLowerCase().trim();
+              const foundLoc = workLocations.find(
+                (l) => l.name.toLowerCase().trim() === locStr,
+              );
+              if (foundLoc) {
+                locationId = foundLoc.id;
+              }
+            }
+
+            let engineerId: number | undefined = undefined;
+            if (row.engineer) {
+              const engStr = row.engineer.toString().toLowerCase().trim();
+              const foundEng = users.find(
+                (u) => u.username.toLowerCase().trim() === engStr,
+              );
+              if (foundEng) {
+                engineerId = foundEng.id;
+              }
+            }
+
+            const startAt = parseExcelDateTime(row.waktu_mulai);
+            const solvedAt = parseExcelDateTime(row.waktu_selesai);
+            const createdAt = startAt
+              ? new Date(startAt.getTime() - 60 * 1000)
+              : new Date();
+
+            let statusVal: TicketStatus = TicketStatus.Open;
+            if (row.status) {
+              const s = row.status.toString().toLowerCase().trim();
+              if (Object.values(TicketStatus).includes(s as TicketStatus)) {
+                statusVal = s as TicketStatus;
+              }
+            }
+
+            let slaPolicyId = defaultSla.id;
+            if (
+              row.sla_id !== undefined &&
+              row.sla_id !== '' &&
+              !isNaN(Number(row.sla_id))
+            ) {
+              slaPolicyId = Number(row.sla_id);
+            }
+
+            const newTicket = manager.create(Ticket, {
+              sequenceNumber: seqNum,
+              fullNumber: fullNum || (seqNum ? `${seqNum}` : undefined),
+              assetTag: row.assettag
+                ? row.assettag.toString().trim()
+                : undefined,
+              employeeNik: nikStr,
+              snapshot,
+              engineerId,
+              createdByUserId: creatorId,
+              problem: row.permasalahan
+                ? row.permasalahan.toString().trim()
+                : '',
+              slaPolicyId,
+              locationId,
+              status: statusVal,
+              solution: row.penyelesaian
+                ? row.penyelesaian.toString().trim()
+                : undefined,
+              contact: row.contact ? row.contact.toString().trim() : undefined,
+              remarks: row.remarks ? row.remarks.toString().trim() : undefined,
+              startAt,
+              solvedAt,
+              createdAt,
+            });
+
+            ticketsToSave.push(newTicket);
+          }
+
+          const chunkSize = 50;
+          for (let i = 0; i < ticketsToSave.length; i += chunkSize) {
+            const chunk = ticketsToSave.slice(i, i + chunkSize);
+            await manager.upsert(Ticket, chunk, {
+              conflictPaths: ['fullNumber'],
+              skipUpdateIfNoValuesChanged: true,
+              upsertType: 'on-conflict-do-update',
             });
           }
 
-          const picVal = row.pic ? row.pic.toString().trim() : undefined;
-          const positionVal = row.position
-            ? row.position.toString().trim()
-            : row.directorate
-              ? row.directorate.toString().trim()
-              : undefined;
-          const deptVal = row.department
-            ? row.department.toString().trim()
-            : undefined;
-          const divVal = row.division
-            ? row.division.toString().trim()
-            : undefined;
-
-          const snapshot: TicketSnapshot = {
-            userNonEmployee: picVal || undefined,
-            position: positionVal || employee?.position,
-            department: deptVal || employee?.department,
-            division: divVal || employee?.division,
+          return {
+            message: `Successfully imported ${ticketsToSave.length} tickets`,
+            count: ticketsToSave.length,
           };
-
-          let locationId: number | undefined = undefined;
-          if (row.lokasi) {
-            const locStr = row.lokasi.toString().toLowerCase().trim();
-            const foundLoc = workLocations.find(
-              (l) => l.name.toLowerCase().trim() === locStr,
-            );
-            if (foundLoc) {
-              locationId = foundLoc.id;
-            }
-          }
-
-          let engineerId: number | undefined = undefined;
-          if (row.engineer) {
-            const engStr = row.engineer.toString().toLowerCase().trim();
-            const foundEng = users.find(
-              (u) => u.username.toLowerCase().trim() === engStr,
-            );
-            if (foundEng) {
-              engineerId = foundEng.id;
-            }
-          }
-
-          const startAt = parseExcelDateTime(row.waktu_mulai);
-          const solvedAt = parseExcelDateTime(row.waktu_selesai);
-          const createdAt = startAt
-            ? new Date(startAt.getTime() - 60 * 1000)
-            : new Date();
-
-          let statusVal: TicketStatus = TicketStatus.Open;
-          if (row.status) {
-            const s = row.status.toString().toLowerCase().trim();
-            if (Object.values(TicketStatus).includes(s as TicketStatus)) {
-              statusVal = s as TicketStatus;
-            }
-          }
-
-          let slaPolicyId = defaultSla.id;
-          if (
-            row.sla_id !== undefined &&
-            row.sla_id !== '' &&
-            !isNaN(Number(row.sla_id))
-          ) {
-            slaPolicyId = Number(row.sla_id);
-          }
-
-          const newTicket = manager.create(Ticket, {
-            sequenceNumber: seqNum,
-            fullNumber: fullNum || (seqNum ? `${seqNum}` : undefined),
-            assetTag: row.assettag ? row.assettag.toString().trim() : undefined,
-            employeeNik: nikStr,
-            snapshot,
-            engineerId,
-            createdByUserId: creatorId,
-            problem: row.permasalahan ? row.permasalahan.toString().trim() : '',
-            slaPolicyId,
-            locationId,
-            status: statusVal,
-            solution: row.penyelesaian
-              ? row.penyelesaian.toString().trim()
-              : undefined,
-            contact: row.contact ? row.contact.toString().trim() : undefined,
-            remarks: row.remarks ? row.remarks.toString().trim() : undefined,
-            startAt,
-            solvedAt,
-            createdAt,
-          });
-
-          ticketsToSave.push(newTicket);
-        }
-
-        const chunkSize = 50;
-        for (let i = 0; i < ticketsToSave.length; i += chunkSize) {
-          const chunk = ticketsToSave.slice(i, i + chunkSize);
-          await manager.upsert(Ticket, chunk, {
-            conflictPaths: ['fullNumber'],
-            skipUpdateIfNoValuesChanged: true,
-            upsertType: 'on-conflict-do-update',
-          });
-        }
-
-        return {
-          message: `Successfully imported ${ticketsToSave.length} tickets`,
-          count: ticketsToSave.length,
-        };
-      });
+        },
+      );
     } catch (error: any) {
       Logger.error('Error importing tickets from excel:', error);
       if (error instanceof HttpException) {
         throw error;
       }
       throw new BadRequestException(
-        error?.detail || error?.message || 'Failed to import tickets from excel',
+        error?.detail ||
+          error?.message ||
+          'Failed to import tickets from excel',
       );
     }
   }
