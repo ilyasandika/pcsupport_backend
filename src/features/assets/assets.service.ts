@@ -9,7 +9,13 @@ import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Asset, AssetStatus, SupportDetail } from './entities/asset.entity';
-import { Brackets, EntityManager, FindOneOptions, IsNull, Repository } from 'typeorm';
+import {
+  Brackets,
+  EntityManager,
+  FindOneOptions,
+  IsNull,
+  Repository,
+} from 'typeorm';
 import { ErrorDetailBuilder } from '../../common/utils/error-detail-builder';
 import { plainToInstance } from 'class-transformer';
 import {
@@ -41,7 +47,7 @@ export class AssetsService {
 
     private readonly assetCategoryService: AssetCategoriesService,
     private readonly workLocationsService: WorkLocationsService,
-  ) { }
+  ) {}
 
   async create(dto: CreateAssetDto) {
     const serialNumberExist = await this.assetRepository.findOneBy({
@@ -215,31 +221,28 @@ export class AssetsService {
         WHEN 'unknown' THEN 11
         ELSE 12
     END`,
-      'status_order'
+      'status_order',
     );
 
     qb.addOrderBy('status_order', 'ASC');
 
-
     qb.addSelect(
       `CASE WHEN asset.asset_tag ~ '^[0-9]+$' THEN 0 ELSE 1 END`,
-      'tag_is_number'
+      'tag_is_number',
     );
 
     qb.addSelect(
       `CASE WHEN asset.asset_tag ~ '^[0-9]+$' THEN CAST(asset.asset_tag AS BIGINT) ELSE NULL END`,
-      'tag_number_value'
+      'tag_number_value',
     );
-
 
     qb.orderBy('status_order', 'ASC');
     qb.addOrderBy('tag_is_number', 'ASC');
     qb.addOrderBy('tag_number_value', 'ASC');
     qb.addOrderBy('asset.assetTag', 'DESC');
 
-
     if (isList) {
-      query.limit = 10
+      query.limit = 10;
     }
 
     const { data: assets, meta } = await paginateQb(qb, query);
@@ -402,14 +405,16 @@ export class AssetsService {
         ? externalManager.getRepository(Asset)
         : this.assetRepository;
 
-      if (dto.warrantyDate as unknown as string === '') dto.warrantyDate = undefined;
-      if (dto.purchaseDate as unknown as string === '') dto.purchaseDate = undefined;
+      if ((dto.warrantyDate as unknown as string) === '')
+        dto.warrantyDate = undefined;
+      if ((dto.purchaseDate as unknown as string) === '')
+        dto.purchaseDate = undefined;
 
       this.assetRepository.merge(asset, dto);
       return await executor.save(asset);
     } catch (e) {
-      Logger.log(e)
-      throw e
+      Logger.log(e);
+      throw e;
     }
   }
 
@@ -452,10 +457,10 @@ export class AssetsService {
       (row: RawAssetExcelRow) => {
         const support: SupportDetail | undefined = row['support_sn']
           ? ({
-            type: row['support_type'],
-            sn: row['support_sn'],
-            name: row['support_name'],
-          } as unknown as SupportDetail)
+              type: row['support_type'],
+              sn: row['support_sn'],
+              name: row['support_name'],
+            } as unknown as SupportDetail)
           : undefined;
 
         const categoryVal = row['category_id'] ?? row['category'];
