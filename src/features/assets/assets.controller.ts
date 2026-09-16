@@ -8,7 +8,8 @@ import {
   Param,
   ParseFilePipeBuilder,
   Patch,
-  Post, Query,
+  Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -17,13 +18,11 @@ import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { AssetStatus } from './entities/asset.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
-import fs from 'node:fs';
-import { UseTypia } from '../../common/decorators/use-typia.decorator';
 import { AssetQueryDto } from './dto/asset-query.dto';
 
 @Controller('assets')
 export class AssetsController {
-  constructor(private readonly assetsService: AssetsService) { }
+  constructor(private readonly assetsService: AssetsService) {}
 
   @Post()
   create(@Body() dto: CreateAssetDto) {
@@ -37,14 +36,12 @@ export class AssetsController {
 
   @Get('list/active')
   findActive() {
-    return this.assetsService.findAll({
-      status: [AssetStatus.AssignedForBackup, AssetStatus.Assigned],
-    }, true);
-  }
-
-  @Get('list/backup')
-  findBackupForList() {
-    return this.assetsService.findAll({ status: [AssetStatus.Backup] });
+    return this.assetsService.findAll(
+      {
+        status: [AssetStatus.AssignedForBackup, AssetStatus.Assigned],
+      },
+      true,
+    );
   }
 
   @Get('employee/:nik')
