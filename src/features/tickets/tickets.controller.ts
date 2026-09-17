@@ -34,6 +34,7 @@ import { CreateTicketPdfDto } from './dto/create-ticket-pdf.dto';
 import { TicketQueryDto } from './dto/ticket-query.dto';
 import { OwnershipGuard } from 'src/common/guards/ownership.guard';
 import { CheckOwnership } from 'src/common/decorators/ownership.decorator';
+import { CloseTicketDto } from './dto/close-ticket.dto';
 
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -89,6 +90,19 @@ export class TicketsController {
     paramKey: 'id',
   })
   update(@Param('id') id: string, @Body() dto: UpdateTicketDto) {
+    return this.ticketsService.update(+id, dto);
+  }
+
+  @Patch('close/:id')
+  @UseGuards(OwnershipGuard)
+  @CheckOwnership({
+    service: TicketsService,
+    ownershipField: 'engineerId',
+    bypassRoles: [Role.Admin, Role.Supervisor, Role.Helpdesk],
+    paramKey: 'id',
+  })
+  close(@Param('id') id: string, @Body() dto: CloseTicketDto) {
+    dto.solvedAt = new Date();
     return this.ticketsService.update(+id, dto);
   }
 

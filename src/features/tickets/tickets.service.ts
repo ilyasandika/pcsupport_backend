@@ -476,23 +476,12 @@ export class TicketsService {
       dto.solvedAt = new Date();
     }
 
-    this.ticketRepository.merge(ticket, dto);
-
     try {
       return await this.dataSource.transaction(async (manager) => {
-        Logger.log('start transaction');
         if (dto.backupAssetTag && ticket.assetTag && ticket.engineerId) {
-          // Logger.log('start update backup asset status to assign for backup ');
-          // await this.assetService.update(
-          //   dto.backupAssetTag,
-          //   {
-          //     status: AssetStatus.AssignedForBackup,
-          //   },
-          //   manager,
-          // );
-          // Logger.log('done update backup asset status to assign for backup ');
-
-          Logger.log('start create backup asset assignment for backup ');
+          Logger.log(dto.backupAssetTag, 'backupAssetTag');
+          dto.assignmentType = AssignmentType.Backup;
+          dto.isAssetAssignment = true;
           await this.assetAssignmentService.create(
             {
               assetTag: dto.backupAssetTag,
@@ -507,25 +496,21 @@ export class TicketsService {
             ticket.createdByUserId,
             manager,
           );
-          Logger.log('done create asset assignment for backup ');
 
-          Logger.log('start find latest assignment for backup ');
           const assignment =
             await this.assetAssignmentService.findLatestByAssetTag(
               ticket.assetTag,
               manager,
             );
 
-          Logger.log('done find latest assignment for backup ');
-
-          Logger.log('start update asset to under maintenance ');
           await this.assetAssignmentService.update(
             assignment.id,
             { isUnderMaintenance: true },
             manager,
           );
-          Logger.log('done update asset to under maintenance ');
         }
+
+        manager.merge(Ticket, ticket, dto);
         return await manager.save(Ticket, ticket);
       });
     } catch (e) {
