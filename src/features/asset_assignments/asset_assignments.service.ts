@@ -21,7 +21,6 @@ import {
   LessThanOrEqual,
   MoreThanOrEqual,
   Not,
-  QueryFailedError,
   Repository,
 } from 'typeorm';
 import { EmployeesService } from '../employees/employees.service';
@@ -39,7 +38,6 @@ import { DetailAssetAssignmentResponseDto } from './dto/asset_assignment-respons
 import { CreateAssignmentPdfDto } from './dto/create-asset_assignment-pdf.dto';
 import { createReadStream, existsSync, ReadStream } from 'node:fs';
 import { extname, join } from 'path';
-import { ASSET_ASSIGNMENT_UPLOAD_DIR } from '../../common/const/directory.const';
 import { promisify } from 'util';
 import libre from 'libreoffice-convert';
 import createReport from 'docx-templates';
@@ -71,7 +69,7 @@ export class AssetAssignmentsService {
     @Inject(forwardRef(() => TicketsService))
     private readonly ticketService: TicketsService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   async create(
     dto: CreateAssetAssignmentDto,
@@ -179,9 +177,11 @@ export class AssetAssignmentsService {
             contact: dto.contact,
             remarks: dto.assignRemarks,
             solvedAt: new Date(dto.assignedAt),
-            status: TicketStatus.ClosedOnsite,
+            status: TicketStatus.InProgress,
             isAssetAssignment: true,
-            assignmentType: dto.isBackup ? AssignmentType.Backup : AssignmentType.Assign,
+            assignmentType: dto.isBackup
+              ? AssignmentType.Backup
+              : AssignmentType.Assign,
           },
           creatorId,
           manager,
@@ -190,7 +190,7 @@ export class AssetAssignmentsService {
       Logger.log('[Assigment] start create assigment');
       const assignment = manager.create(AssetAssignment, dto);
       if (createdTicket?.fullNumber) {
-        assignment.assignFullTicketNumber = createdTicket.fullNumber;
+        assignment.assignFullTicketNumber = createdTicket?.fullNumber;
       }
       Logger.log('[Assigment] end create assigment');
       assignment.createdById = creatorId;
@@ -206,7 +206,7 @@ export class AssetAssignmentsService {
     };
 
     if (externalManager) {
-      Logger.log('[Assigment] start save assigment 2'); ``
+      Logger.log('[Assigment] start save assigment 2');
       return await executeOperation(externalManager);
     } else {
       return await this.dataSource.transaction(async (manager) => {
@@ -308,7 +308,7 @@ export class AssetAssignmentsService {
       assignment.returnedAt = null;
     }
     if (dto.returnRemarks === null) {
-      assignment.returnRemarks = "";
+      assignment.returnRemarks = '';
     }
 
     const isReturned = !!assignment.returnedAt;
@@ -351,7 +351,7 @@ export class AssetAssignmentsService {
     id: number,
     dto: ReturnAssetAssignmentDto,
     user: JwtPayload,
-    externalManager?: EntityManager,
+    // externalManager?: EntityManager,
   ) {
     const assignment = await this.assetAssignmentRepository.findOne({
       where: { id },
@@ -433,7 +433,7 @@ export class AssetAssignmentsService {
           contact: assignment.contact,
           remarks: dto.remarks,
           solvedAt: new Date(),
-          status: TicketStatus.ClosedOnsite,
+          status: TicketStatus.InProgress,
           isAssetAssignment: true,
           assignmentType: AssignmentType.Return,
         },
@@ -505,13 +505,15 @@ export class AssetAssignmentsService {
         ? assignment.returnBy || assignment.assignBy
         : assignment.assignBy;
 
-    const ticket =
+    const ticket: Ticket | undefined | null =
       assignType === 'return'
         ? assignment.returnTicket || assignment.assignTicket
         : assignment.assignTicket || assignment.returnTicket;
 
-    const supervisorId = ticket?.approvedBy?.id;
-    const supervisor = ticket?.approvedBy || (supervisorId ? await this.userService.findOne(supervisorId) : undefined);
+    const supervisorId: number | undefined = ticket?.approvedBy?.id;
+    const supervisor =
+      ticket?.approvedBy ||
+      (supervisorId ? await this.userService.findOne(supervisorId) : undefined);
 
     try {
       const templateBuffer = await fs.readFile(absoluteTemplatePath);
@@ -558,7 +560,12 @@ export class AssetAssignmentsService {
         vendorName: assignment.asset?.project?.vendor?.name || '-',
         projectName: assignment.asset?.project?.name || '-',
 
-        remarks: (assignType === 'assign' ? assignment.assignRemarks : assignment.returnRemarks) || assignment.remarks || '-',
+        remarks:
+          (assignType === 'assign'
+            ? assignment.assignRemarks
+            : assignment.returnRemarks) ||
+          assignment.remarks ||
+          '-',
         phoneNumber: assignment.contact || '-',
         date: new Date(
           assignType === 'assign'
@@ -630,19 +637,24 @@ export class AssetAssignmentsService {
           }
 
           const typeName = assignmentEntity.isBackup ? 'backup' : assignType;
-          const nik = assignmentEntity.employee?.nik || assignmentEntity.picEmployeeNik || 'NIK';
-          const assetTag = assignmentEntity.asset?.assetTag || assignmentEntity.assetTag || 'TAG';
+          const nik =
+            assignmentEntity.employee?.nik ||
+            assignmentEntity.picEmployeeNik ||
+            'NIK';
+          const assetTag =
+            assignmentEntity.asset?.assetTag ||
+            assignmentEntity.assetTag ||
+            'TAG';
           const uniqueSuffix = `${dayjs(Date.now()).format('YYYYMMMDD')}-${Math.round(Math.random() * 1000)}`;
           const fileName = `${typeName}-${assetTag}-${nik}-${uniqueSuffix}.pdf`;
           const filePath = path.join(dir, fileName);
 
-          const targetField = assignType === 'return' ? 'returnFilePath' : 'assignFilePath';
+          const targetField =
+            assignType === 'return' ? 'returnFilePath' : 'assignFilePath';
           const oldFilePath = assignmentEntity[targetField];
 
           if (oldFilePath && existsSync(oldFilePath)) {
-            try {
-              await fs.unlink(oldFilePath);
-            } catch { }
+            await fs.unlink(oldFilePath);
           }
 
           await fs.writeFile(filePath, pdfBuffer);
@@ -744,15 +756,11 @@ export class AssetAssignmentsService {
     }
 
     const targetField =
-      type === 'return'
-        ? 'returnUserSignaturePath'
-        : 'assignUserSignaturePath';
+      type === 'return' ? 'returnUserSignaturePath' : 'assignUserSignaturePath';
 
     const oldPath = assignment[targetField];
     if (oldPath && existsSync(oldPath)) {
-      try {
-        await fs.unlink(oldPath);
-      } catch { }
+      await fs.unlink(oldPath);
     }
 
     assignment[targetField] = file.path;
@@ -773,9 +781,7 @@ export class AssetAssignmentsService {
     });
 
     const targetField =
-      type === 'return'
-        ? 'returnUserSignaturePath'
-        : 'assignUserSignaturePath';
+      type === 'return' ? 'returnUserSignaturePath' : 'assignUserSignaturePath';
 
     const sigPath = assignment ? assignment[targetField] : null;
 
@@ -801,14 +807,11 @@ export class AssetAssignmentsService {
       );
     }
 
-    const targetField =
-      type === 'return' ? 'returnFilePath' : 'assignFilePath';
+    const targetField = type === 'return' ? 'returnFilePath' : 'assignFilePath';
     const filePath = assignment[targetField];
 
     if (filePath && existsSync(filePath)) {
-      try {
-        await fs.unlink(filePath);
-      } catch { }
+      await fs.unlink(filePath);
     }
 
     assignment[targetField] = null;
@@ -925,7 +928,7 @@ export class AssetAssignmentsService {
               assignById: isLast
                 ? userId
                 : userList.find((v) => v.username.toLowerCase() === 'unknown')
-                  ?.id,
+                    ?.id,
               returnedAt: getReturnDate(),
               assignRemarks: row['remarks'],
               returnRemarks: row['remarks_penarikan'],
@@ -982,7 +985,6 @@ export class AssetAssignmentsService {
       const validUserIds = validUsers.map((user) => user.nik);
 
       const validDtos: CreateAssetAssignmentDto[] = [];
-
       const invalidDtos: any[] = [];
 
       const validAssetTagSet = new Set(validAssetTags);
@@ -1025,7 +1027,7 @@ export class AssetAssignmentsService {
         .orIgnore()
         .execute();
     } catch (error) {
-      throw error;
+      throw new BadRequestException(error);
     }
   }
 
@@ -1089,12 +1091,14 @@ export class AssetAssignmentsService {
         throw error;
       }
       throw new InternalServerErrorException(
-        `Failed to remove asset assignment: ${error?.message || error}`,
+        `Failed to remove asset assignment: ${error}`,
       );
     }
   }
 
-  async findByTicketFullNumber(fullNumber: string): Promise<AssetAssignment | null> {
+  async findByTicketFullNumber(
+    fullNumber: string,
+  ): Promise<AssetAssignment | null> {
     return await this.assetAssignmentRepository.findOne({
       where: [
         { assignFullTicketNumber: fullNumber },
@@ -1103,7 +1107,11 @@ export class AssetAssignmentsService {
     });
   }
 
-  async updateFilePath(id: number, field: 'assignFilePath' | 'returnFilePath', filePath: string) {
+  async updateFilePath(
+    id: number,
+    field: 'assignFilePath' | 'returnFilePath',
+    filePath: string,
+  ) {
     await this.assetAssignmentRepository.update(id, { [field]: filePath });
   }
 }
