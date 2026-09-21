@@ -275,10 +275,38 @@ export class AssetsService {
       lastAssignments.map((aa) => [aa.assetTag, aa]),
     );
 
-    const formattedAsset = assets.map((asset) => ({
-      ...asset,
-      assetAssignment: lastAssignmentMap.get(asset.assetTag) ?? null,
-    }));
+    const ticketsCount: { assetTag: string }[] = await this.ticketRepository
+      .createQueryBuilder('ticket')
+      .select('ticket.assetTag', 'assetTag')
+      .where('ticket.assetTag IN (:...assetTags)', { assetTags })
+      .groupBy('ticket.assetTag')
+      .getRawMany();
+
+    const ticketAssetTags = new Set(ticketsCount.map((t) => t.assetTag));
+
+    const assignmentsCount: { assetTag: string }[] =
+      await this.assetAssignmentRepository
+        .createQueryBuilder('assignment')
+        .select('assignment.assetTag', 'assetTag')
+        .where('assignment.assetTag IN (:...assetTags)', { assetTags })
+        .groupBy('assignment.assetTag')
+        .getRawMany();
+
+    const assignmentAssetTags = new Set(
+      assignmentsCount.map((a) => a.assetTag),
+    );
+
+    const formattedAsset = assets.map((asset) => {
+      const hasTicket = ticketAssetTags.has(asset.assetTag);
+      const hasAssignment = assignmentAssetTags.has(asset.assetTag);
+
+
+      return {
+        ...asset,
+        assetAssignment: lastAssignmentMap.get(asset.assetTag) ?? null,
+        isUsed: hasTicket || hasAssignment,
+      };
+    });
 
     return {
       data: plainToInstance(AssetResponseDto, formattedAsset),

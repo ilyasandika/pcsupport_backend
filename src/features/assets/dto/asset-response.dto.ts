@@ -99,4 +99,7 @@ export class AssetResponseDto extends PickType(DetailAssetResponseDto, [
   @Expose()
   @Type(() => AssetAssignmentResponseDto)
   assetAssignment?: AssetAssignmentResponseDto | null;
+
+  @Expose()
+  isUsed: boolean;
 }
