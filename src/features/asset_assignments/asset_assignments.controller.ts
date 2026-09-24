@@ -1,21 +1,20 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  FileTypeValidator,
+  Get,
+  HttpStatus,
+  MaxFileSizeValidator,
+  Param,
+  ParseFilePipe,
+  ParseFilePipeBuilder,
+  Patch,
+  Post,
   Res,
-  Logger,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
-  UploadedFile,
-  ParseFilePipeBuilder,
-  HttpStatus,
-  ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
 } from '@nestjs/common';
 import { AssetAssignmentsService } from './asset_assignments.service';
 import { CreateAssetAssignmentDto } from './dto/create-asset_assignment.dto';
@@ -28,10 +27,14 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import * as jwtPayloadInterface from '../../common/interfaces/jwt-payload.interface';
+import { type JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { Role } from '../../common/enums/role.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { assetAssignmentMulterOptions, signatureMulterOptions } from '../../config/multer.config';
-import { type JwtPayload } from '../../common/interfaces/jwt-payload.interface';
+import {
+  assetAssignmentMulterOptions,
+  signatureMulterOptions,
+} from '../../config/multer.config';
+import { AssignmentType } from '../../common/enums/assignment-type.enum';
 
 @Controller('asset-assignments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -50,7 +53,7 @@ export class AssetAssignmentsController {
   }
 
   @Get('assets/:id')
-  async findByAssetId(@Param('id') id: string) {
+  async findByAssetTag(@Param('id') id: string) {
     return await this.assetAssignmentsService.findAllByAssetTag(id);
   }
 
@@ -89,7 +92,7 @@ export class AssetAssignmentsController {
     @Body() dto: CreateAssignmentPdfDto,
     @Res() res: express.Response,
   ) {
-    const pdfBuffer = await this.assetAssignmentsService.createBastFromTemplate(
+    const pdfBuffer = await this.assetAssignmentsService.generatePdf(
       +id,
       dto,
       'assign',
@@ -104,7 +107,7 @@ export class AssetAssignmentsController {
     @Body() dto: CreateAssignmentPdfDto,
     @Res() res: express.Response,
   ) {
-    const pdfBuffer = await this.assetAssignmentsService.createBastFromTemplate(
+    const pdfBuffer = await this.assetAssignmentsService.generatePdf(
       +id,
       dto,
       'return',
@@ -120,11 +123,7 @@ export class AssetAssignmentsController {
     @Body() dto: CreateAssignmentPdfDto,
     @Res() res: express.Response,
   ) {
-    const pdfBuffer = await this.assetAssignmentsService.createBastFromTemplate(
-      +id,
-      dto,
-    );
-    Logger.log(pdfBuffer);
+    const pdfBuffer = await this.assetAssignmentsService.generatePdf(+id, dto);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="bast-${id}.pdf"`);
     res.send(pdfBuffer);
@@ -140,7 +139,7 @@ export class AssetAssignmentsController {
           fileType: 'application/pdf',
           skipMagicNumbersValidation: true,
         })
-        .addMaxSizeValidator({ maxSize: 2 * 1024 * 1024 })
+        .addMaxSizeValidator({ maxSize: 1 * 1024 * 1024 })
         .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
     )
     file: Express.Multer.File,
@@ -162,7 +161,7 @@ export class AssetAssignmentsController {
           fileType: 'application/pdf',
           skipMagicNumbersValidation: true,
         })
-        .addMaxSizeValidator({ maxSize: 2 * 1024 * 1024 })
+        .addMaxSizeValidator({ maxSize: 1 * 1024 * 1024 })
         .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
     )
     file: Express.Multer.File,
@@ -194,12 +193,16 @@ export class AssetAssignmentsController {
           fileType: /^image\/(png|jpeg|jpg)$/,
           skipMagicNumbersValidation: true,
         })
-        .addMaxSizeValidator({ maxSize: 2 * 1024 * 1024 })
+        .addMaxSizeValidator({ maxSize: 1 * 1024 * 1024 })
         .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
     )
     file: Express.Multer.File,
   ) {
-    return this.assetAssignmentsService.uploadUserSignature(+id, file, 'assign');
+    return this.assetAssignmentsService.uploadUserSignature(
+      +id,
+      file,
+      AssignmentType.Assign,
+    );
   }
 
   @Post(':id/user-signature/return')
@@ -217,7 +220,11 @@ export class AssetAssignmentsController {
     )
     file: Express.Multer.File,
   ) {
-    return this.assetAssignmentsService.uploadUserSignature(+id, file, 'return');
+    return this.assetAssignmentsService.uploadUserSignature(
+      +id,
+      file,
+      AssignmentType.Return,
+    );
   }
 
   @Get(':id/user-signature/assign')
@@ -225,7 +232,8 @@ export class AssetAssignmentsController {
     @Param('id') id: string,
     @Res() res: express.Response,
   ) {
-    const fileStream = await this.assetAssignmentsService.getUserSignatureStream(+id, 'assign');
+    const fileStream =
+      await this.assetAssignmentsService.getUserSignatureStream(+id, 'assign');
     res.setHeader('Content-Type', 'image/png');
     fileStream.pipe(res);
   }
@@ -235,15 +243,35 @@ export class AssetAssignmentsController {
     @Param('id') id: string,
     @Res() res: express.Response,
   ) {
-    const fileStream = await this.assetAssignmentsService.getUserSignatureStream(+id, 'return');
+    const fileStream =
+      await this.assetAssignmentsService.getUserSignatureStream(+id, 'return');
     res.setHeader('Content-Type', 'image/png');
     fileStream.pipe(res);
   }
 
-  @Get(':id/pdf')
-  async viewPdf(@Param('id') id: string, @Res() res: express.Response) {
+  @Get(':id/pdf/assign')
+  async viewAssignPdf(@Param('id') id: string, @Res() res: express.Response) {
     const fileStream =
-      await this.assetAssignmentsService.getAssetAssignmentStream(+id);
+      await this.assetAssignmentsService.getAssetAssignmentStream(
+        +id,
+        AssignmentType.Assign,
+      );
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="asset-assignment-${id}.pdf"`,
+    );
+    fileStream.pipe(res);
+  }
+
+  @Get(':id/pdf/return')
+  async viewReturnPdf(@Param('id') id: string, @Res() res: express.Response) {
+    const fileStream =
+      await this.assetAssignmentsService.getAssetAssignmentStream(
+        +id,
+        AssignmentType.Return,
+      );
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
