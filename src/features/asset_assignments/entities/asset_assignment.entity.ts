@@ -5,6 +5,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -37,8 +38,11 @@ export class AssetAssignment {
   })
   assignFullTicketNumber?: string | null;
 
-  @ManyToOne(() => Ticket)
-  @JoinColumn({ name: 'assign_full_ticket_number', referencedColumnName: 'fullNumber' })
+  @OneToOne(() => Ticket)
+  @JoinColumn({
+    name: 'assign_full_ticket_number',
+    referencedColumnName: 'fullNumber',
+  })
   assignTicket?: Ticket | null;
 
   @Column({
@@ -47,8 +51,11 @@ export class AssetAssignment {
   })
   returnFullTicketNumber?: string | null;
 
-  @ManyToOne(() => Ticket)
-  @JoinColumn({ name: 'return_full_ticket_number', referencedColumnName: 'fullNumber' })
+  @OneToOne(() => Ticket)
+  @JoinColumn({
+    name: 'return_full_ticket_number',
+    referencedColumnName: 'fullNumber',
+  })
   returnTicket?: Ticket | null;
 
   @Column({

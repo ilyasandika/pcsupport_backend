@@ -17,6 +17,7 @@ import { SlaPolicy } from '../../sla-policies/entities/sla-policy.entity';
 import { WorkLocation } from '../../work-locations/entities/work-location.entity';
 import { ExternalTicket } from '../../external_tickets/entities/external_ticket.entity';
 import { type TicketSnapshot } from '../interfaces/ticket-snapshot.interface';
+import { AssetAssignment } from '../../asset_assignments/entities/asset_assignment.entity';
 
 @Entity({
   name: 'tickets',
@@ -205,4 +206,10 @@ export class Ticket {
 
   @OneToOne(() => ExternalTicket, (externalTicket) => externalTicket.ticket)
   externalTicket: ExternalTicket;
+
+  @OneToOne(() => AssetAssignment, (assignment) => assignment.assignTicket)
+  assignAssignment: AssetAssignment;
+
+  @OneToOne(() => AssetAssignment, (assignment) => assignment.assignTicket)
+  returnAssignment: AssetAssignment;
 }
