@@ -4,20 +4,14 @@ import {
   Body,
   Query,
   UseInterceptors,
-  ClassSerializerInterceptor,
   Get,
   Param,
   Patch,
-  Put,
   Delete,
   UseGuards,
   UploadedFile,
   ParseFilePipeBuilder,
   HttpStatus,
-  ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
-  Logger,
   Res,
 } from '@nestjs/common';
 import express from 'express';
@@ -29,16 +23,14 @@ import { SyncUserTagsDto } from './dto/sync-user-tags.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { CreateTemplateDto } from '../templates/dto/create-template.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import fs from 'node:fs';
 import { memoryStorage } from 'multer';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 // @Roles(Role.Admin)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   @Post()
   create(@Body() dto: CreateUserDto) {
@@ -51,13 +43,11 @@ export class UsersController {
   }
 
   @Get('engineers')
-  // @Roles(Role.Admin, Role.Supervisor)
   findEngineers() {
     return this.usersService.findEngineers();
   }
 
   @Get('supervisors')
-  // @Roles(Role.Admin)
   findSupervisors() {
     return this.usersService.findSupervisors();
   }
@@ -166,9 +156,11 @@ export class UsersController {
   }
 
   @Post('import-excel')
-  @UseInterceptors(FileInterceptor('file', {
-    storage: memoryStorage(),
-  }))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+    }),
+  )
   async importExcel(
     @UploadedFile(
       new ParseFilePipeBuilder()
