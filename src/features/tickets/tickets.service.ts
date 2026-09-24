@@ -432,7 +432,7 @@ export class TicketsService {
     };
   }
 
-  async findOne(id: number, user?: JwtPayload) {
+  async findOne(id: number) {
     const ticket = await this.ticketRepository.findOne({
       where: { id },
       relations: {
@@ -702,7 +702,12 @@ export class TicketsService {
 
   async generatePdf(ticketId: number, dto?: CreateTicketPdfDto) {
     const ticket = await this.findOne(ticketId);
-    const supervisorId = ticket.approvedBy?.id;
+    const fbSupervisor =
+      await this.userService.findFallBackSupervisorByLocation(
+        ticket.location.id,
+      );
+    const supervisorId =
+      ticket.approvedBy?.id || dto?.supervisorId || fbSupervisor.id;
     const supervisor = supervisorId
       ? await this.userService.findOne(supervisorId)
       : undefined;
@@ -803,6 +808,8 @@ export class TicketsService {
             : '-',
         supportSn: ticket.asset?.support?.sn || '-',
         oldAsset: ticket.backupAssetTag || '-',
+        extTicketNumber: '-',
+        extTicketDamageDescription: '-',
       };
 
       const report = await createReport({
@@ -931,7 +938,40 @@ export class TicketsService {
   async uploadUserSignature(ticketId: number, file: Express.Multer.File) {
     const ticket = await this.ticketRepository.findOne({
       where: { id: ticketId },
+      relations: {
+        assignAssignment: true,
+        returnAssignment: true,
+      },
     });
+
+    const assignment = () => {
+      if (ticket?.isAssetAssignment) {
+        if (
+          ticket.assignmentType === AssignmentType.Assign ||
+          ticket.assignmentType === AssignmentType.BackupAssign
+        ) {
+          return ticket.assignAssignment;
+        }
+
+        if (
+          ticket.assignmentType === AssignmentType.Return ||
+          ticket.assignmentType === AssignmentType.BackupReturn
+        ) {
+          return ticket.returnAssignment;
+        }
+      }
+      return null;
+    };
+
+    const assignmentId = assignment()?.id;
+    if (assignmentId && ticket?.assignmentType) {
+      await this.assetAssignmentService.uploadUserSignature(
+        assignmentId,
+        file,
+        ticket?.assignmentType,
+        true,
+      );
+    }
 
     if (!ticket) {
       if (fs.existsSync(file.path)) {
