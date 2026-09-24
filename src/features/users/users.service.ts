@@ -3,13 +3,12 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { QueryBuilder, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
@@ -40,9 +39,10 @@ import {
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
-    @InjectRepository(Ticket) private readonly ticketRepository: Repository<Ticket>,
+    @InjectRepository(Ticket)
+    private readonly ticketRepository: Repository<Ticket>,
     private readonly llmService: LlmService,
-  ) { }
+  ) {}
 
   async create(dto: CreateUserDto) {
     const { username, email } = dto;
@@ -98,10 +98,7 @@ export class UsersService {
     const usersWithFlag = entities.map((user, index) => {
       const rawVal = raw[index]?.has_ticket;
       const isUserHasTicket =
-        rawVal === true ||
-        rawVal === '1' ||
-        rawVal === 1 ||
-        rawVal === 'true';
+        rawVal === true || rawVal === '1' || rawVal === 1 || rawVal === 'true';
 
       return {
         ...user,
@@ -126,7 +123,7 @@ export class UsersService {
   }
 
   async findSupervisors() {
-    const engineers = await this.userRepository.find({
+    const supervisors = await this.userRepository.find({
       where: {
         role: Role.Supervisor,
       },
@@ -135,7 +132,28 @@ export class UsersService {
       },
     });
 
-    return plainToInstance(DetailUserResponseDto, engineers);
+    return plainToInstance(DetailUserResponseDto, supervisors);
+  }
+
+  async findFallBackSupervisorByLocation(locationId: number) {
+    let supervisor = await this.userRepository.findOne({
+      where: {
+        role: Role.Supervisor,
+        workLocationId: locationId,
+        active: true,
+      },
+    });
+
+    if (!supervisor) {
+      supervisor = await this.userRepository.findOne({
+        where: {
+          role: Role.Supervisor,
+          active: true,
+        },
+      });
+    }
+
+    return plainToInstance(DetailUserResponseDto, supervisor);
   }
 
   async findActiveUser(id: number) {
@@ -236,7 +254,15 @@ export class UsersService {
   async findForLogin(username: string): Promise<UserForLogin> {
     const user = await this.userRepository.findOne({
       where: [{ username }],
-      select: ['id', 'username', 'email', 'password', 'role', 'fullName', 'active'],
+      select: [
+        'id',
+        'username',
+        'email',
+        'password',
+        'role',
+        'fullName',
+        'active',
+      ],
     });
     if (!user) {
       return null;
