@@ -450,7 +450,7 @@ export class AssetAssignmentsService {
     });
   }
 
-  async createBastFromTemplate(
+  async generatePdf(
     assetAssignmentId: number,
     dto: CreateAssignmentPdfDto,
     assignType: 'assign' | 'return' = 'assign',
@@ -505,12 +505,12 @@ export class AssetAssignmentsService {
         ? assignment.returnBy || assignment.assignBy
         : assignment.assignBy;
 
-    const ticket: Ticket | undefined | null =
+    const ticket =
       assignType === 'return'
         ? assignment.returnTicket || assignment.assignTicket
         : assignment.assignTicket || assignment.returnTicket;
 
-    const supervisorId: number | undefined = ticket?.approvedBy?.id;
+    const supervisorId = ticket?.approvedBy?.id || dto.supervisorId;
     const supervisor =
       ticket?.approvedBy ||
       (supervisorId ? await this.userService.findOne(supervisorId) : undefined);
@@ -740,10 +740,15 @@ export class AssetAssignmentsService {
   async uploadUserSignature(
     assetAssignmentId: number,
     file: Express.Multer.File,
-    type: 'assign' | 'return' = 'assign',
+    type: AssignmentType,
+    skipTicketSync = false,
   ) {
     const assignment = await this.assetAssignmentRepository.findOne({
       where: { id: assetAssignmentId },
+      relations: {
+        assignTicket: true,
+        returnTicket: true,
+      },
     });
 
     if (!assignment) {
@@ -755,8 +760,36 @@ export class AssetAssignmentsService {
       );
     }
 
+    const getTicket = async () => {
+      if (
+        (type === AssignmentType.Assign ||
+          type === AssignmentType.BackupAssign) &&
+        assignment.assignTicket
+      ) {
+        return await this.ticketService.findOne(assignment.assignTicket.id);
+      }
+
+      if (
+        (type === AssignmentType.Return ||
+          type === AssignmentType.BackupReturn) &&
+        assignment.returnTicket
+      ) {
+        return await this.ticketService.findOne(assignment.returnTicket.id);
+      }
+
+      return null;
+    };
+
+    const ticket = await getTicket();
+
+    if (ticket && !skipTicketSync) {
+      return this.ticketService.uploadUserSignature(ticket.id, file);
+    }
+
     const targetField =
-      type === 'return' ? 'returnUserSignaturePath' : 'assignUserSignaturePath';
+      type === AssignmentType.Return
+        ? 'returnUserSignaturePath'
+        : 'assignUserSignaturePath';
 
     const oldPath = assignment[targetField];
     if (oldPath && existsSync(oldPath)) {
@@ -823,15 +856,33 @@ export class AssetAssignmentsService {
     };
   }
 
-  async getAssetAssignmentStream(id: number): Promise<ReadStream> {
+  async getAssetAssignmentStream(
+    id: number,
+    type: AssignmentType,
+  ): Promise<ReadStream> {
     const assignment = await this.assetAssignmentRepository.findOne({
       where: { id },
     });
     if (!assignment || !assignment.assignFilePath) {
       throw new NotFoundException('file not found');
     }
-    const fullPath = join(process.cwd(), assignment.assignFilePath);
+    const getPath = () => {
+      if (
+        type === AssignmentType.Assign ||
+        type === AssignmentType.BackupAssign
+      ) {
+        return assignment.assignFilePath;
+      } else if (
+        type === AssignmentType.Return ||
+        type === AssignmentType.BackupReturn
+      ) {
+        return assignment.returnFilePath;
+      } else {
+        throw new BadRequestException('Invalid assignment type');
+      }
+    };
 
+    const fullPath = join(process.cwd(), getPath() || '');
     if (!existsSync(fullPath)) {
       throw new NotFoundException('file not found');
     }
