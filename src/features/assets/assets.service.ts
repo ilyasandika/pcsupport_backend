@@ -300,7 +300,6 @@ export class AssetsService {
       const hasTicket = ticketAssetTags.has(asset.assetTag);
       const hasAssignment = assignmentAssetTags.has(asset.assetTag);
 
-
       return {
         ...asset,
         assetAssignment: lastAssignmentMap.get(asset.assetTag) ?? null,
@@ -365,6 +364,12 @@ export class AssetsService {
           employee: true,
           assignBy: true,
           createdBy: true,
+          assignTicket: {
+            approvedBy: true,
+          },
+          returnTicket: {
+            approvedBy: true,
+          },
         },
         tickets: {
           engineer: true,
