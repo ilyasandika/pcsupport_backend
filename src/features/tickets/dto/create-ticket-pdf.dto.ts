@@ -1,13 +1,13 @@
-import {
-  IsBoolean,
-  IsOptional,
-} from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateTicketPdfDto {
+  @IsNotEmpty()
+  supervisorId: number;
+
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => {
+  @Transform(({ value }): boolean => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
@@ -16,7 +16,7 @@ export class CreateTicketPdfDto {
 
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => {
+  @Transform(({ value }): boolean => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
@@ -25,11 +25,10 @@ export class CreateTicketPdfDto {
 
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => {
+  @Transform(({ value }): boolean => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
   })
   eSignUser?: boolean;
 }
-

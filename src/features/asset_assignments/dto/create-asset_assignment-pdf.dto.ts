@@ -1,15 +1,13 @@
-import {
-  IsBoolean,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateAssignmentPdfDto {
+  @IsNotEmpty()
+  supervisorId: number;
+
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => {
+  @Transform(({ value }): boolean => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
@@ -18,7 +16,7 @@ export class CreateAssignmentPdfDto {
 
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => {
+  @Transform(({ value }): boolean => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
@@ -27,7 +25,7 @@ export class CreateAssignmentPdfDto {
 
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => {
+  @Transform(({ value }): boolean => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
