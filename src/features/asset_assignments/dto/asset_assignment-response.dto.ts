@@ -3,6 +3,7 @@ import { EmployeeResponseDto } from '../../employees/dto/employee-response.dto';
 import { AssetResponseDto } from '../../assets/dto/asset-response.dto';
 import { UserResponseDto } from '../../users/dto/user-response.dto';
 import { PickType } from '@nestjs/mapped-types';
+import { TicketResponseDtoForAsset } from '../../tickets/dto/ticket-response.dto';
 
 export class DetailAssetAssignmentResponseDto {
   @Expose()
@@ -77,13 +78,18 @@ export class DetailAssetAssignmentResponseDto {
   returnFullTicketNumber?: string;
 
   @Expose()
-  assignTicket?: any;
+  @Type(() => TicketResponseDtoForAsset)
+  assignTicket?: TicketResponseDtoForAsset;
 
   @Expose()
-  returnTicket?: any;
+  @Type(() => TicketResponseDtoForAsset)
+  returnTicket?: TicketResponseDtoForAsset;
 
   @Expose()
   remarks?: string;
+
+  @Expose()
+  isLegacyData: boolean;
 
   @Expose()
   createdAt: Date;
