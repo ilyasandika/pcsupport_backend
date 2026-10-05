@@ -3,12 +3,13 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
@@ -96,6 +97,7 @@ export class UsersService {
       .getRawAndEntities();
 
     const usersWithFlag = entities.map((user, index) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access
       const rawVal = raw[index]?.has_ticket;
       const isUserHasTicket =
         rawVal === true || rawVal === '1' || rawVal === 1 || rawVal === 'true';
@@ -331,7 +333,7 @@ export class UsersService {
 
     await this.deleteFileIfExists(user.signaturePath);
 
-    user.signaturePath = null as any;
+    user.signaturePath = undefined;
     await this.userRepository.save(user);
     return { message: 'Signature deleted successfully' };
   }
@@ -409,7 +411,7 @@ export class UsersService {
       }
     }
 
-    const whereResolved: any = {
+    const whereResolved: FindOptionsWhere<Ticket> = {
       engineerId: id,
       status: In([
         TicketStatus.Resolved,
@@ -419,13 +421,13 @@ export class UsersService {
       ]),
     };
 
-    const whereFallback: any = {
+    const whereFallback: FindOptionsWhere<Ticket> = {
       engineerId: id,
     };
 
     if (dateFilter) {
-      whereResolved.createdAt = dateFilter;
-      whereFallback.createdAt = dateFilter;
+      whereResolved.createdAt = dateFilter as Date;
+      whereFallback.createdAt = dateFilter as Date;
     }
 
     const tickets = await this.ticketRepository.find({
@@ -440,7 +442,7 @@ export class UsersService {
         solvedAt: 'DESC',
         createdAt: 'DESC',
       },
-      take: dateFilter ? 100 : 30,
+      take: dateFilter ? undefined : 100,
     });
 
     const ticketList =
@@ -489,6 +491,7 @@ export class UsersService {
       }
 
       return {
+        ticketNumber: t.fullNumber,
         problem: t.problem,
         category: t.asset?.category?.name || '',
         solution: t.solution || t.remarks || '',
@@ -552,6 +555,7 @@ export class UsersService {
     user.reviewHistory = currentReviewHistory;
     user.tagsUpdatedAt = new Date();
     const updatedUser = await this.userRepository.save(user);
+    Logger.log(newReviewItem, 'User AI Review History');
 
     return plainToInstance(DetailUserResponseDto, updatedUser);
   }
