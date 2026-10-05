@@ -77,8 +77,8 @@ export class TicketsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @GetUser() user: JwtPayload) {
-    return this.ticketsService.findOne(+id, user);
+  findOne(@Param('id') id: string) {
+    return this.ticketsService.findOne(+id);
   }
 
   @Patch(':id')
