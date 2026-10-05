@@ -2,6 +2,7 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import { TicketStatus } from '../../../common/enums/ticket-status.enum';
 import { Transform } from 'class-transformer';
+import { AssignmentType } from '../../../common/enums/assignment-type.enum';
 
 export class TicketQueryDto extends PaginationQueryDto {
   @IsOptional()
@@ -58,9 +59,17 @@ export class TicketQueryDto extends PaginationQueryDto {
 
   @IsOptional()
   @IsArray()
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  @Transform(({ value }: { value: TicketStatus }) =>
+    Array.isArray(value) ? value : [value],
+  )
   status?: TicketStatus;
+
+  @IsOptional()
+  @IsArray()
+  @Transform(({ value }: { value: AssignmentType | 'work order' }) =>
+    Array.isArray(value) ? value : [value],
+  )
+  ticketType: (AssignmentType | 'work order')[];
 
   @IsOptional()
   @IsString()

@@ -234,6 +234,20 @@ export class TicketsService {
       .leftJoinAndSelect('ticket.slaPolicy', 'slaPolicy')
       .withDeleted();
 
+    if (query.ticketType && query.ticketType.length > 0) {
+      const dbTypes = query.ticketType.filter((type) => type !== 'work order');
+
+      const hasWorkOrder = query.ticketType.includes('work order');
+
+      if (dbTypes.length > 0) {
+        qb.andWhere('ticket.assignmentType IN (:...dbTypes)', { dbTypes });
+      }
+
+      if (hasWorkOrder) {
+        qb.andWhere('ticket.assignmentType IS NULL');
+      }
+    }
+
     if (query.asset) {
       qb.andWhere(
         new Brackets((subQb) => {
