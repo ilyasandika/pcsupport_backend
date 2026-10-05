@@ -56,7 +56,8 @@ export class TemplatesController {
 
   @Get(':id/download')
   async download(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
-    const { stream, fileName } = await this.templatesService.getTemplateFileStream(id);
+    const { stream, fileName } =
+      await this.templatesService.getTemplateFileStream(id);
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'Content-Disposition': `attachment; filename="${fileName}"`,
